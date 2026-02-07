@@ -1,0 +1,193 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Park.in",
+      "vibe": "Vibrant, Royal, Accessible",
+      "archetype": "The Modern Explorer",
+      "theme_mode": "light",
+      "core_philosophy": "Jaipur's heritage meets modern utility. Warm sandstone tones mixed with electric functionality."
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Outfit, sans-serif",
+        "body": "DM Sans, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "weights": {
+        "headings": "700",
+        "subheadings": "600",
+        "body": "400",
+        "bold": "700"
+      },
+      "scale": {
+        "h1": "text-5xl md:text-7xl tracking-tight leading-none",
+        "h2": "text-4xl md:text-5xl tracking-tight",
+        "h3": "text-2xl md:text-3xl font-semibold",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm font-medium tracking-wide uppercase text-muted-foreground"
+      },
+      "imports": [
+        "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Outfit:wght@400;600;800&display=swap');"
+      ]
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "hex": "#E65100",
+          "name": "Jaipur Terracotta",
+          "usage": "Primary CTAs, Brand Highlights",
+          "tailwind_var": "16 100% 45%"
+        },
+        "secondary": {
+          "hex": "#00695C",
+          "name": "Peacock Teal",
+          "usage": "Secondary Actions, Success States, Map Markers",
+          "tailwind_var": "172 100% 20%"
+        },
+        "background": {
+          "hex": "#FFF8F0",
+          "name": "Warm Sandstone",
+          "usage": "Page Backgrounds",
+          "tailwind_var": "32 50% 97%"
+        },
+        "surface": {
+          "hex": "#FFFFFF",
+          "name": "Pure White",
+          "usage": "Cards, Modals, Inputs",
+          "tailwind_var": "0 0% 100%"
+        },
+        "text": {
+          "primary": "#2D2420",
+          "secondary": "#5D5450",
+          "tailwind_var_foreground": "17 17% 15%"
+        },
+        "status": {
+          "vacant": "#10B981",
+          "occupied": "#EF4444",
+          "reserved": "#9CA3AF",
+          "selected": "#3B82F6"
+        }
+      },
+      "css_vars_override": {
+        "root": {
+          "--background": "32 50% 97%",
+          "--foreground": "17 17% 15%",
+          "--card": "0 0% 100%",
+          "--card-foreground": "17 17% 15%",
+          "--popover": "0 0% 100%",
+          "--popover-foreground": "17 17% 15%",
+          "--primary": "16 100% 45%",
+          "--primary-foreground": "0 0% 100%",
+          "--secondary": "172 100% 20%",
+          "--secondary-foreground": "0 0% 100%",
+          "--muted": "32 30% 90%",
+          "--muted-foreground": "17 10% 50%",
+          "--accent": "45 100% 50%",
+          "--accent-foreground": "17 17% 15%",
+          "--destructive": "0 84.2% 60.2%",
+          "--destructive-foreground": "0 0% 98%",
+          "--border": "17 10% 85%",
+          "--input": "17 10% 85%",
+          "--ring": "16 100% 45%",
+          "--radius": "0.75rem"
+        }
+      }
+    },
+    "layout": {
+      "spacing": {
+        "container_padding": "p-6 md:p-12 lg:p-20",
+        "section_gap": "gap-12 md:gap-24",
+        "element_gap": "gap-4 md:gap-6"
+      },
+      "grids": {
+        "bento_locations": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[300px]",
+        "parking_lot": "grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4"
+      },
+      "containers": {
+        "main": "max-w-7xl mx-auto w-full",
+        "narrow": "max-w-3xl mx-auto w-full"
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-12 px-8 rounded-full font-bold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/90 h-12 px-8 rounded-full font-bold shadow-md hover:shadow-lg transition-all",
+        "outline": "border-2 border-primary text-primary hover:bg-primary/10 h-12 px-8 rounded-full font-bold transition-all"
+      },
+      "cards": {
+        "location_card": "group relative overflow-hidden rounded-2xl bg-white shadow-md hover:shadow-2xl transition-all duration-300 border border-border/50",
+        "booking_summary": "bg-white rounded-xl p-8 shadow-lg border-t-4 border-primary"
+      },
+      "inputs": {
+        "default": "h-12 rounded-lg border-2 border-input bg-white px-4 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+      },
+      "parking_slot": {
+        "base": "aspect-[2/3] rounded-md border-2 flex items-center justify-center font-bold text-sm transition-all cursor-pointer shadow-sm",
+        "vacant": "bg-white border-green-500 text-green-700 hover:bg-green-50 hover:scale-105",
+        "occupied": "bg-red-50 border-red-200 text-red-300 cursor-not-allowed opacity-80",
+        "selected": "bg-blue-600 border-blue-600 text-white shadow-lg scale-110 ring-4 ring-blue-200",
+        "reserved": "bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed striped-bg"
+      }
+    },
+    "visual_enhancers": {
+      "shadows": {
+        "soft": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+        "hard": "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+      },
+      "gradients": {
+        "hero_overlay": "bg-gradient-to-t from-black/80 via-black/20 to-transparent",
+        "brand_mesh": "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-100 via-transparent to-transparent"
+      },
+      "textures": {
+        "noise": "opacity-20 mix-blend-overlay pointer-events-none fixed inset-0 z-50 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"
+      }
+    },
+    "assets": {
+      "images": {
+        "hero_bg": "https://images.unsplash.com/photo-1701087366618-112f1b333a9f?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "parking_hero": "https://images.unsplash.com/photo-1720166671019-744dcef65d05?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "tourist_vibe": "https://images.unsplash.com/photo-1651569411954-b843950d0c1e?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "hawa_mahal": "https://images.unsplash.com/photo-1701087366618-112f1b333a9f?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "city_palace": "https://images.unsplash.com/photo-1607160913575-9854cbecca02?crop=entropy&cs=srgb&fm=jpg&q=85"
+      },
+      "icons": {
+        "library": "lucide-react",
+        "style": "Stroke width 2px, rounded corners"
+      }
+    },
+    "motion": {
+      "transitions": "transition-all duration-300 ease-out",
+      "hover_lift": "hover:-translate-y-1 hover:shadow-lg",
+      "page_enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    }
+  },
+  "instructions_to_main_agent": {
+    "setup": [
+      "Update /app/frontend/src/index.css with the CSS variables provided in colors.css_vars_override.",
+      "Install 'lucide-react' for icons.",
+      "Install 'react-leaflet' and 'leaflet' for the map functionality.",
+      "Install 'clsx' and 'tailwind-merge' for class utility if not present."
+    ],
+    "layout_rules": [
+      "Use the 'Bento' grid for the Location Selection page.",
+      "Ensure the Parking Slot Selection page is mobile-responsive. On mobile, the map should be sticky or easily toggleable.",
+      "Use the 'Warm Sandstone' background for all pages to maintain the Jaipur vibe. Do not use pure white backgrounds for full pages."
+    ],
+    "component_rules": [
+      "For the Parking Slot grid, use CSS Grid. Do not use absolute positioning for slots unless using a canvas-based approach (which is overkill here).",
+      "Use Shadcn UI components for the Date Picker, Dialogs, and Dropdowns, but style them using the 'surface' and 'primary' colors.",
+      "The 'Book Now' button must be the most prominent element on the screen."
+    ],
+    "accessibility": [
+      "Ensure contrast ratios between the Orange primary and White text are sufficient. If not, use black text on orange or darken the orange.",
+      "All parking slots must have aria-labels indicating their status (e.g., 'Slot A1, Occupied')."
+    ]
+  },
+  "universal_guidelines": [
+    "Do not use generic gradients.",
+    "Use 2-3x more spacing than typical designs.",
+    "Every interaction needs micro-animations.",
+    "Use 'sonner' for toasts."
+  ]
+}

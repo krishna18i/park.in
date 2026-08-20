@@ -1,64 +1,142 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Outfit:wght@400;600;800&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ---------------------------------------------------------------------------
+   Park.in design tokens.
+   Jaipur heritage palette: terracotta sandstone against peacock teal, on a
+   warm sand page. Declared as @theme so every value is available as a Tailwind
+   utility (bg-brand-500, text-teal-700, font-display, ...).
+--------------------------------------------------------------------------- */
+@theme {
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 
-body {
-    margin: 0;
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  /* Jaipur terracotta -- primary actions, brand */
+  --color-brand-50: #fff4ec;
+  --color-brand-100: #ffe3d0;
+  --color-brand-200: #ffc4a3;
+  --color-brand-300: #ff9d6b;
+  --color-brand-400: #fb7333;
+  --color-brand-500: #e65100;
+  --color-brand-600: #c44100;
+  --color-brand-700: #9c3400;
+  --color-brand-800: #7a2900;
+  --color-brand-900: #4d1a00;
+
+  /* Peacock teal -- secondary, success, availability */
+  --color-teal-50: #e6f4f2;
+  --color-teal-100: #c2e5e0;
+  --color-teal-200: #8dcdc4;
+  --color-teal-300: #4fb0a4;
+  --color-teal-400: #1c8b7d;
+  --color-teal-500: #00695c;
+  --color-teal-600: #005449;
+  --color-teal-700: #003f37;
+
+  /* Warm sandstone -- page and surfaces */
+  --color-sand-50: #fffaf4;
+  --color-sand-100: #fff3e6;
+  --color-sand-200: #f6e6d4;
+  --color-sand-300: #e8d3ba;
+
+  --color-ink-500: #7a6a5c;
+  --color-ink-700: #4a3f37;
+  --color-ink-900: #241d18;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-sand-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Keyboard focus stays visible; pointer clicks don't get a ring. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
 }
 
-code {
-    font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-@layer base {
-    :root {
-        --background: 32 50% 97%;
-        --foreground: 17 17% 15%;
-        --card: 0 0% 100%;
-        --card-foreground: 17 17% 15%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 17 17% 15%;
-        --primary: 16 100% 45%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 172 100% 20%;
-        --secondary-foreground: 0 0% 100%;
-        --muted: 32 30% 90%;
-        --muted-foreground: 17 10% 50%;
-        --accent: 45 100% 50%;
-        --accent-foreground: 17 17% 15%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 17 10% 85%;
-        --input: 17 10% 85%;
-        --ring: 16 100% 45%;
-        --radius: 0.75rem;
-    }
-}
-
-@layer base {
-    * {
-        @apply border-border;
-    }
-    body {
-        @apply bg-background text-foreground;
-    }
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Outfit', sans-serif;
-}
-
-.striped-bg {
+@layer components {
+  /* Diagonal hatch marks a bay that is reserved but not yet occupied --
+     distinguishable from "taken" without relying on colour alone. */
+  .hatched {
     background-image: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 10px,
-        rgba(0, 0, 0, 0.05) 10px,
-        rgba(0, 0, 0, 0.05) 20px
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(122, 106, 92, 0.22) 4px,
+      rgba(122, 106, 92, 0.22) 8px
     );
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(230, 81, 0, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(230, 81, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 81, 0, 0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

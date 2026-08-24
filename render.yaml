@@ -1,0 +1,39 @@
+# Render blueprint. In the Render dashboard: New > Blueprint, point it at this
+# repo, and it builds the Dockerfile and runs the whole app as one service.
+#
+# The free plan has no persistent disk and sleeps after ~15 minutes idle, so the
+# SQLite file starts fresh on each cold start and re-seeds the demo data
+# (SEED_ON_STARTUP). That is the right trade for a demo; switch the plan to
+# `starter` and attach a disk mounted at /app/backend if bookings must survive.
+
+services:
+  - type: web
+    name: parkin
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to Jaipur
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      # Generated once, then held by Render -- never the dev default in production.
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: SEED_ON_STARTUP
+        value: "true"
+      - key: RESERVATION_HOLD_MINUTES
+        value: "10"
+
+      # Optional integrations. `sync: false` means Render prompts for a value
+      # instead of storing one here; leave them blank to keep payment simulated
+      # and search on OpenStreetMap.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
 from ..models import (
@@ -17,7 +17,7 @@ from ..models import (
     SlotStatus,
     User,
 )
-from ..schemas import BookingOut, SlotOut, SlotStatusIn, StatsOut, TicketActionOut, VerifyTicketIn
+from ..schemas import BookingOut, SlotOut, SlotStatusIn, StatsOut, TicketActionOut, VerifyTicketIn, to_booking_out
 from ..security import current_admin
 from ..services import announce_slot, set_slot_status
 
@@ -69,10 +69,10 @@ def all_bookings(
     status_filter: BookingStatus | None = Query(default=None, alias="status"),
     limit: int = Query(default=200, ge=1, le=1000),
 ) -> list[BookingOut]:
-    stmt = select(Booking).order_by(Booking.created_at.desc()).limit(limit)
+    stmt = select(Booking).options(selectinload(Booking.feedback)).order_by(Booking.created_at.desc()).limit(limit)
     if status_filter is not None:
         stmt = stmt.where(Booking.status == status_filter.value)
-    return [BookingOut.model_validate(b) for b in db.execute(stmt).scalars().all()]
+    return [to_booking_out(b) for b in db.execute(stmt).scalars().all()]
 
 
 @router.patch("/slots/{slot_id}", response_model=SlotOut)
@@ -137,5 +137,5 @@ async def verify_ticket(
         await announce_slot(db, booking.slot_id)
 
     return TicketActionOut(
-        action=action, message=message, booking=BookingOut.model_validate(booking)
+        action=action, message=message, booking=to_booking_out(booking)
     )

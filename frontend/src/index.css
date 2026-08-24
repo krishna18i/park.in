@@ -70,6 +70,19 @@
   }
 }
 
+.leaflet-container {
+  z-index: 0;
+}
+
+.leaflet-interactive {
+  cursor: pointer;
+}
+
+.leaflet-interactive:focus-visible {
+  outline: 3px solid var(--color-teal-400);
+  outline-offset: 3px;
+}
+
 @layer components {
   /* Diagonal hatch marks a bay that is reserved but not yet occupied --
      distinguishable from "taken" without relying on colour alone. */

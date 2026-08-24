@@ -1,32 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, MapPin, QrCode, ScanLine, Timer, Zap } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowRight, MapPin, QrCode, ScanLine, Zap } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../context/I18nContext";
 import { useLiveEvent } from "../context/LiveContext";
 import { useToast } from "../context/ToastContext";
 import { Button, Card, Photo, Spinner } from "../components/ui";
+import LotsMap from "../components/LotsMap";
+import SearchBay from "../components/SearchBay";
 import { money } from "../lib/format";
 
 const FEATURES = [
-  {
-    icon: Zap,
-    title: "Live availability",
-    body: "Every bay updates the instant someone books, arrives or drives away. No refresh, no guesswork.",
-  },
-  {
-    icon: QrCode,
-    title: "QR entry",
-    body: "Your booking becomes a scannable ticket. Show it at the gate and the barrier lifts.",
-  },
-  {
-    icon: Timer,
-    title: "Held for 10 minutes",
-    body: "A reserved bay is yours while you pay. Change your mind and it returns to the pool automatically.",
-  },
+  { icon: Zap, titleKey: "home.feat.live", bodyKey: "home.feat.liveBody" },
+  { icon: QrCode, titleKey: "home.feat.qr", bodyKey: "home.feat.qrBody" },
+  { icon: ScanLine, titleKey: "home.feat.maps", bodyKey: "home.feat.mapsBody" },
 ];
 
-function LocationCard({ location, onOpen, index }) {
+function LocationCard({ location, onOpen, index, t }) {
   const soldOut = location.available_slots === 0;
 
   return (
@@ -48,7 +39,7 @@ function LocationCard({ location, onOpen, index }) {
             soldOut ? "bg-red-500/90 text-white" : "bg-white/90 text-teal-700"
           }`}
         >
-          {soldOut ? "Full" : `${location.available_slots} free`}
+          {soldOut ? t("home.full") : t("home.free", { n: location.available_slots })}
         </span>
       </div>
 
@@ -61,10 +52,10 @@ function LocationCard({ location, onOpen, index }) {
         <div className="flex items-center justify-between pt-1">
           <span className="text-sm font-semibold">
             {money(location.price_per_hour)}
-            <span className="text-xs font-normal opacity-80"> / hour</span>
+            <span className="text-xs font-normal opacity-80"> {t("home.hour")}</span>
           </span>
           <span className="inline-flex items-center gap-1 text-sm font-semibold">
-            Book
+            {t("home.book")}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </span>
         </div>
@@ -77,8 +68,10 @@ export default function Home() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { t } = useI18n();
   const toast = useToast();
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const refreshTimer = useRef(null);
 
   const load = useCallback(async () => {
@@ -103,6 +96,13 @@ export default function Home() {
   });
 
   useEffect(() => () => clearTimeout(refreshTimer.current), []);
+
+  useEffect(() => {
+    if (hash !== "#locations") return;
+    const node = document.getElementById("locations");
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hash, loading]);
 
   const open = (location) => {
     if (!user) {
@@ -133,25 +133,28 @@ export default function Home() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
             </span>
-            {loading ? "Checking availability" : `${totalFree} bays free right now`}
+            {loading ? t("home.checking") : t("home.badge", { n: totalFree })}
           </span>
 
           <h1
             className="animate-rise mt-6 font-display text-5xl font-extrabold leading-[1.05] tracking-tight text-ink-900 sm:text-7xl"
             style={{ animationDelay: "60ms" }}
           >
-            Park at the
+            {t("home.title1")}
             <br />
-            <span className="text-brand-500">Pink City</span> gates.
+            <span className="text-brand-500">{t("home.title2")}</span> {t("home.title3")}
           </h1>
 
           <p
             className="animate-rise mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink-700"
             style={{ animationDelay: "120ms" }}
           >
-            Reserve a bay at Jaipur's heritage sites before you leave home. Live
-            availability, a QR ticket at the gate, and no circling the block.
+            {t("home.lead")}
           </p>
+
+          <div className="animate-rise" style={{ animationDelay: "150ms" }}>
+            <SearchBay locations={locations} onOpen={open} />
+          </div>
 
           <div
             className="animate-rise mt-9 flex flex-wrap items-center justify-center gap-3"
@@ -163,25 +166,32 @@ export default function Home() {
                 document.getElementById("locations")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Find a bay
+              {t("home.find")}
               <ArrowRight className="h-5 w-5" />
             </Button>
             {!user && (
               <Button size="lg" variant="outline" onClick={() => navigate("/login")}>
-                I have an account
+                {t("home.haveAccount")}
               </Button>
             )}
           </div>
         </div>
       </section>
 
-      <section id="locations" className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
+      <section id="locations" className="scroll-mt-20 mx-auto max-w-7xl px-6 py-16 sm:py-20">
         <div className="mb-10 text-center">
           <h2 className="font-display text-4xl font-bold text-ink-900">
-            Where are you <span className="text-teal-500">headed?</span>
+            {t("home.headed")} <span className="text-teal-500">{t("home.headed2")}</span>
           </h2>
-          <p className="mt-2 text-ink-700">Four lots across the city's most-visited monuments.</p>
+          <p className="mt-2 text-ink-700">{t("home.four")}</p>
         </div>
+
+        {!loading && (
+          <div className="mb-8">
+            <h3 className="mb-3 font-display text-xl font-bold text-ink-900">{t("home.mapTitle")}</h3>
+            <LotsMap locations={locations} onOpen={open} />
+          </div>
+        )}
 
         {loading ? (
           <Spinner label="Loading locations" />
@@ -193,6 +203,7 @@ export default function Home() {
                 location={location}
                 index={index}
                 onOpen={open}
+                t={t}
               />
             ))}
           </div>
@@ -201,13 +212,13 @@ export default function Home() {
 
       <section className="border-t border-sand-200 bg-white/60 py-16">
         <div className="mx-auto grid max-w-6xl gap-6 px-6 sm:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <Card key={title} className="p-6">
+          {FEATURES.map(({ icon: Icon, titleKey, bodyKey }) => (
+            <Card key={titleKey} className="p-6">
               <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-500">
                 <Icon className="h-5 w-5" />
               </span>
-              <h3 className="mt-4 font-display text-lg font-bold text-ink-900">{title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{body}</p>
+              <h3 className="mt-4 font-display text-lg font-bold text-ink-900">{t(titleKey)}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{t(bodyKey)}</p>
             </Card>
           ))}
         </div>
@@ -220,16 +231,11 @@ export default function Home() {
               <ScanLine className="h-7 w-7" />
             </span>
             <div className="flex-1">
-              <h3 className="font-display text-xl font-bold text-ink-900">
-                Running the lot, not parking in it?
-              </h3>
-              <p className="mt-1 text-sm text-ink-700">
-                The operator console shows live occupancy, revenue and a gate scanner that
-                checks vehicles in and out from a ticket code.
-              </p>
+              <h3 className="font-display text-xl font-bold text-ink-900">{t("home.opsTitle")}</h3>
+              <p className="mt-1 text-sm text-ink-700">{t("home.opsBody")}</p>
             </div>
             <Button variant="secondary" onClick={() => navigate("/login")}>
-              Operator sign in
+              {t("home.opsCta")}
             </Button>
           </div>
         </Card>

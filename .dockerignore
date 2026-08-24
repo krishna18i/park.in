@@ -1,0 +1,32 @@
+# Keep secrets, local state and platform-specific installs out of the image.
+.git
+.gitignore
+README.md
+render.yaml
+run-backend.ps1
+
+**/.venv
+**/venv
+**/node_modules
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+
+# Secrets. .env.example is documentation and is harmless, but nothing else.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local database and logs -- the container seeds its own on first boot.
+**/*.db
+**/*.db-wal
+**/*.db-shm
+backend/server.log
+
+# The web stage builds this fresh; never ship a stale local copy.
+frontend/dist
+
+**/.vscode
+**/.idea
+**/.DS_Store
+**/Thumbs.db

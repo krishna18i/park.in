@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, Car, CreditCard, QrCode, Ticket as TicketIcon, X } from "lucide-react";
+import {
+  CalendarClock,
+  Car,
+  CreditCard,
+  MessageSquareHeart,
+  QrCode,
+  Ticket as TicketIcon,
+  X,
+} from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../context/I18nContext";
 import { useLiveEvent } from "../context/LiveContext";
 import { useToast } from "../context/ToastContext";
+import StarRating from "../components/StarRating";
 import { Badge, Button, Card, EmptyState, Spinner } from "../components/ui";
 import { STATUS_STYLES, duration, money, when } from "../lib/format";
 
@@ -12,8 +22,10 @@ const LIVE = new Set(["pending", "confirmed", "active"]);
 
 function BookingRow({ booking, onCancel, busy }) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const style = STATUS_STYLES[booking.status] ?? STATUS_STYLES.completed;
   const cancellable = booking.status === "pending" || booking.status === "confirmed";
+  const finished = booking.status === "completed";
 
   return (
     <Card className="p-4 transition-shadow hover:shadow-md">
@@ -39,6 +51,18 @@ function BookingRow({ booking, onCancel, busy }) {
               {when(booking.start_time)} - {duration(booking.hours)}
             </span>
           </p>
+          {finished && booking.rating > 0 && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <StarRating value={booking.rating} size="sm" label={t("fb.overall")} />
+              <button
+                type="button"
+                onClick={() => navigate(`/feedback/${booking.id}`)}
+                className="text-[11px] font-semibold text-teal-700 hover:text-teal-800"
+              >
+                {t("fb.sent.edit")}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
@@ -58,6 +82,16 @@ function BookingRow({ booking, onCancel, busy }) {
                   Ticket
                 </Button>
               )
+            )}
+            {finished && !booking.rating && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/feedback/${booking.id}`)}
+              >
+                <MessageSquareHeart className="h-3.5 w-3.5" />
+                {t("fb.rateVisit")}
+              </Button>
             )}
             {cancellable && (
               <Button

@@ -14,16 +14,24 @@ MIN_BILLABLE_HOURS = 1.0
 BILLING_BLOCK_HOURS = 0.5  # charged in half-hour blocks, rounded up
 
 
-def price_booking(location: Location, start: datetime, end: datetime) -> tuple[float, float]:
-    """Return (billable_hours, amount) for a stay.
-
-    Part-hours round up to the next half hour and every stay bills at least one
-    hour, which is how real parking operators price and avoids ~0 rupee bookings.
-    """
+def billable_hours(start: datetime, end: datetime) -> float:
     raw_hours = (end - start).total_seconds() / 3600
     blocks = math.ceil(raw_hours / BILLING_BLOCK_HOURS)
-    hours = max(MIN_BILLABLE_HOURS, blocks * BILLING_BLOCK_HOURS)
-    return hours, round(hours * location.price_per_hour, 2)
+    return max(MIN_BILLABLE_HOURS, blocks * BILLING_BLOCK_HOURS)
+
+
+def price_booking(
+    location: Location, start: datetime, end: datetime, *, valet: bool = False
+) -> tuple[float, float, float]:
+    """Return (billable_hours, amount, valet_fee) for a stay.
+
+    Part-hours round up to the next half hour and every stay bills at least one
+    hour. Valet is a one-time operator fee for the booking, not billed per hour.
+    """
+    hours = billable_hours(start, end)
+    valet_fee = round(float(location.valet_price_per_hour or 0), 2) if valet else 0.0
+    amount = round(hours * location.price_per_hour + valet_fee, 2)
+    return hours, amount, valet_fee
 
 
 def hold_deadline() -> datetime:
@@ -38,6 +46,7 @@ def slot_event(slot: Slot) -> dict:
         "row": slot.row,
         "col": slot.col,
         "status": slot.status,
+        "kind": getattr(slot, "kind", "standard"),
     }
 
 

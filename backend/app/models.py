@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -36,6 +36,13 @@ class SlotStatus(str, Enum):
     VACANT = "vacant"
     RESERVED = "reserved"
     OCCUPIED = "occupied"
+
+
+class SlotKind(str, Enum):
+    STANDARD = "standard"
+    EV = "ev"
+    VALET = "valet"
+    HEAVY = "heavy"
 
 
 class BookingStatus(str, Enum):
@@ -73,8 +80,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(120))
     phone: Mapped[str] = mapped_column(String(20), default="")
-    password_hash: Mapped[str] = mapped_column(String(255))
+    password_hash: Mapped[str] = mapped_column(String(255), default="")
     role: Mapped[str] = mapped_column(String(16), default=Role.USER.value)
+    auth_provider: Mapped[str] = mapped_column(String(16), default="password")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     bookings: Mapped[list["Booking"]] = relationship(back_populates="user")
@@ -88,9 +96,13 @@ class Location(Base):
     address: Mapped[str] = mapped_column(String(400))
     description: Mapped[str] = mapped_column(String(400), default="")
     image_url: Mapped[str] = mapped_column(String(600), default="")
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     rows: Mapped[int] = mapped_column(Integer, default=5)
     cols: Mapped[int] = mapped_column(Integer, default=8)
     price_per_hour: Mapped[float] = mapped_column(Float, default=50.0)
+    valet_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    valet_price_per_hour: Mapped[float] = mapped_column(Float, default=80.0)  # flat fee per booking
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     slots: Mapped[list["Slot"]] = relationship(
@@ -110,6 +122,7 @@ class Slot(Base):
     row: Mapped[int] = mapped_column(Integer)
     col: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16), default=SlotStatus.VACANT.value, index=True)
+    kind: Mapped[str] = mapped_column(String(16), default=SlotKind.STANDARD.value)
 
     location: Mapped["Location"] = relationship(back_populates="slots")
 
@@ -140,6 +153,8 @@ class Booking(Base):
     hours: Mapped[float] = mapped_column(Float)
     rate_per_hour: Mapped[float] = mapped_column(Float)
     amount: Mapped[float] = mapped_column(Float)
+    valet: Mapped[bool] = mapped_column(Boolean, default=False)
+    valet_fee: Mapped[float] = mapped_column(Float, default=0.0)
 
     status: Mapped[str] = mapped_column(String(16), default=BookingStatus.PENDING.value, index=True)
     ticket_code: Mapped[str] = mapped_column(String(16), unique=True, index=True)
@@ -152,6 +167,9 @@ class Booking(Base):
     user: Mapped["User"] = relationship(back_populates="bookings")
     payments: Mapped[list["Payment"]] = relationship(
         back_populates="booking", cascade="all, delete-orphan"
+    )
+    feedback: Mapped["Feedback | None"] = relationship(
+        back_populates="booking", cascade="all, delete-orphan", uselist=False
     )
 
 
@@ -167,3 +185,49 @@ class Payment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     booking: Mapped["Booking"] = relationship(back_populates="payments")
+
+
+class Feedback(Base):
+    """One driver's verdict on one visit.
+
+    `rating` is the headline score; the four aspect scores are optional (0 =
+    skipped) and the tag columns hold comma-separated ids from
+    ``app.feedback``. Storing the tags denormalised keeps the whole report a
+    single row -- it is only ever read back in full.
+    """
+
+    __tablename__ = "feedback"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    booking_id: Mapped[str] = mapped_column(
+        ForeignKey("bookings.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    rating: Mapped[int] = mapped_column(Integer)
+    comment: Mapped[str] = mapped_column(String(1000), default="")
+
+    # Aspect scores, 1-5. 0 means the driver skipped that one and it stays out
+    # of every average.
+    cleanliness: Mapped[int] = mapped_column(Integer, default=0)
+    safety: Mapped[int] = mapped_column(Integer, default=0)
+    staff: Mapped[int] = mapped_column(Integer, default=0)
+    value: Mapped[int] = mapped_column(Integer, default=0)
+
+    issues: Mapped[str] = mapped_column(String(400), default="")
+    highlights: Mapped[str] = mapped_column(String(400), default="")
+
+    would_recommend: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    contact_me: Mapped[bool] = mapped_column(Boolean, default=False)
+    contact_phone: Mapped[str] = mapped_column(String(20), default="")
+
+    # Quotable id for the care desk, and the operator-side triage fields.
+    reference_code: Mapped[str] = mapped_column(String(16), default="", index=True)
+    priority: Mapped[str] = mapped_column(String(8), default="low", index=True)
+    status: Mapped[str] = mapped_column(String(16), default="new", index=True)
+    operator_note: Mapped[str] = mapped_column(String(400), default="")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
+
+    booking: Mapped["Booking"] = relationship(back_populates="feedback")

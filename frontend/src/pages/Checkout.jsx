@@ -1,15 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Banknote,
-  Clock,
-  CreditCard,
-  MapPin,
-  ShieldCheck,
-  Smartphone,
-  TriangleAlert,
-} from "lucide-react";
+import { Banknote, Clock, CreditCard, MapPin, Navigation, ShieldCheck, Smartphone, TriangleAlert } from "lucide-react";
 import { api } from "../lib/api";
+import { directionsUrl } from "../lib/maps";
+import { openRazorpay } from "../lib/razorpay";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { Button, Card, Spinner } from "../components/ui";
 import { duration, money, timeLeft, when } from "../lib/format";
@@ -51,11 +46,13 @@ export default function Checkout() {
   const navigate = useNavigate();
   const toast = useToast();
 
+  const { user } = useAuth();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [method, setMethod] = useState("upi");
   const [paying, setPaying] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [gateway, setGateway] = useState("simulated");
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +65,9 @@ export default function Checkout() {
       })
       .catch((error) => !cancelled && toast.error(error.message))
       .finally(() => !cancelled && setLoading(false));
+    api.paymentConfig().then((data) => {
+      if (!cancelled) setGateway(data.provider);
+    }).catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -76,7 +76,28 @@ export default function Checkout() {
   const pay = async () => {
     setPaying(true);
     try {
-      await api.pay({ booking_id: booking.id, method });
+      const live = gateway === "razorpay" && method !== "cash";
+      if (live) {
+        const order = await api.paymentOrder({ booking_id: booking.id, method });
+        const result = await openRazorpay({
+          key: order.key_id,
+          orderId: order.order_id,
+          amount: booking.amount,
+          name: user?.name,
+          email: user?.email,
+          description: `${booking.location_name} · bay ${booking.slot_code}`,
+        });
+        if (!result) return;
+        await api.pay({
+          booking_id: booking.id,
+          method,
+          razorpay_order_id: result.razorpay_order_id,
+          razorpay_payment_id: result.razorpay_payment_id,
+          razorpay_signature: result.razorpay_signature,
+        });
+      } else {
+        await api.pay({ booking_id: booking.id, method });
+      }
       toast.success("Payment received - your ticket is ready");
       navigate(`/ticket/${booking.id}`, { replace: true });
     } catch (error) {
@@ -129,6 +150,15 @@ export default function Checkout() {
               <MapPin className="h-3.5 w-3.5" />
               Bay {booking.slot_code}
             </p>
+            <a
+              href={directionsUrl({ address: `${booking.location_name}, Jaipur` })}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800"
+            >
+              <Navigation className="h-3 w-3" />
+              Directions
+            </a>
           </div>
           <span className="rounded-xl bg-brand-500 px-3.5 py-2 font-display text-lg font-bold text-white">
             {booking.slot_code}
@@ -142,6 +172,9 @@ export default function Checkout() {
             ["Until", when(booking.end_time)],
             ["Duration", duration(booking.hours)],
             ["Rate", `${money(booking.rate_per_hour)} / hour`],
+            ...(booking.valet
+              ? [["Valet", money(booking.valet_fee)]]
+              : []),
           ].map(([label, value]) => (
             <div key={label} className="flex items-center justify-between px-5 py-3 text-sm">
               <dt className="text-ink-500">{label}</dt>
@@ -185,8 +218,9 @@ export default function Checkout() {
         </Button>
 
         <p className="mt-3 text-center text-[11px] leading-snug text-ink-500">
-          Prototype build - the payment step is simulated and no money moves. A live gateway
-          drops into the same call.
+          {gateway === "razorpay" && method !== "cash"
+            ? "UPI and card go through Razorpay Checkout. Cash is collected at the gate."
+            : "Local mode — checkout is simulated so you can demo without a merchant account. Add Razorpay keys to go live."}
         </p>
       </Card>
     </div>

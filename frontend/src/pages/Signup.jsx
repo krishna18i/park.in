@@ -2,16 +2,31 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CircleParking } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../context/I18nContext";
 import { useToast } from "../context/ToastContext";
 import { Button, Card, Field, Input } from "../components/ui";
+import GoogleSignIn from "../components/GoogleSignIn";
 
 export default function Signup() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [busy, setBusy] = useState(false);
   const { signup } = useAuth();
+  const { t } = useI18n();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const go = (user) => {
+    if (user.role === "admin") {
+      navigate("/admin", { replace: true });
+      return;
+    }
+    const from = location.state?.from;
+    const resumeBooking =
+      typeof from === "string" &&
+      ["/lot/", "/checkout/", "/ticket/"].some((prefix) => from.startsWith(prefix));
+    navigate(resumeBooking ? from : "/#locations", { replace: true });
+  };
 
   const update = (key) => (event) => setForm({ ...form, [key]: event.target.value });
 
@@ -21,7 +36,7 @@ export default function Signup() {
     try {
       const user = await signup(form);
       toast.success(`You're in, ${user.name.split(" ")[0]}`);
-      navigate(location.state?.from ?? "/", { replace: true });
+      go(user);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -40,6 +55,10 @@ export default function Signup() {
       </div>
 
       <Card className="p-6">
+        <GoogleSignIn onSignedIn={go} />
+        <p className="my-4 text-center text-xs font-semibold uppercase tracking-wide text-ink-500">
+          {t("login.or")}
+        </p>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Full name" htmlFor="name">
             <Input

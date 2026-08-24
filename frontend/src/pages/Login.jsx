@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CircleParking, ShieldCheck, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../context/I18nContext";
 import { useToast } from "../context/ToastContext";
 import { Button, Card, Field, Input } from "../components/ui";
+import GoogleSignIn from "../components/GoogleSignIn";
 
 // Seeded by the backend on first boot. One click fills the form so a demo
 // never stalls on someone mistyping a password.
@@ -16,9 +18,22 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [busy, setBusy] = useState(false);
   const { login } = useAuth();
+  const { t } = useI18n();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const go = (user) => {
+    if (user.role === "admin") {
+      navigate("/admin", { replace: true });
+      return;
+    }
+    const from = location.state?.from;
+    const resumeBooking =
+      typeof from === "string" &&
+      ["/lot/", "/checkout/", "/ticket/"].some((prefix) => from.startsWith(prefix));
+    navigate(resumeBooking ? from : "/#locations", { replace: true });
+  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -26,9 +41,7 @@ export default function Login() {
     try {
       const user = await login(form.email, form.password);
       toast.success(`Welcome back, ${user.name.split(" ")[0]}`);
-      navigate(user.role === "admin" ? "/admin" : (location.state?.from ?? "/dashboard"), {
-        replace: true,
-      });
+      go(user);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -47,6 +60,10 @@ export default function Login() {
       </div>
 
       <Card className="p-6">
+        <GoogleSignIn onSignedIn={go} />
+        <p className="my-4 text-center text-xs font-semibold uppercase tracking-wide text-ink-500">
+          {t("login.or")}
+        </p>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Email" htmlFor="email">
             <Input

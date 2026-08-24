@@ -5,6 +5,9 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# Runtime log from run-backend.ps1
+server.log
+
 # Local database (regenerated with demo data on first boot)
 *.db
 *.db-wal

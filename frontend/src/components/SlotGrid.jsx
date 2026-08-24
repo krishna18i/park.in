@@ -1,4 +1,5 @@
-import { Car } from "lucide-react";
+import { Car, Truck, Zap } from "lucide-react";
+import { bayKind } from "../lib/layout";
 
 const STYLES = {
   vacant:
@@ -9,6 +10,8 @@ const STYLES = {
 
 const SELECTED =
   "border-brand-500 bg-brand-500 text-white shadow-lg shadow-brand-500/30 scale-105 ring-4 ring-brand-200";
+
+const DIMMED = "border-sand-200 bg-sand-50 text-ink-500/40 cursor-not-allowed opacity-50";
 
 export const LEGEND = [
   { label: "Available", className: "border-teal-400 bg-white" },
@@ -30,15 +33,20 @@ export function Legend() {
   );
 }
 
-/**
- * The parking lot floor plan.
- *
- * Bays are grouped into rows with a drive lane down the middle, so the grid
- * reads like a real lot rather than a spreadsheet. `flashing` holds ids that
- * just changed over the live feed; they pulse briefly so a change made on
- * another screen is visible.
- */
-export default function SlotGrid({ slots, rows, selectedId, onSelect, flashing }) {
+function KindIcon({ kind, className = "h-3.5 w-3.5" }) {
+  if (kind === "ev") return <Zap className={className} />;
+  if (kind === "heavy") return <Truck className={className} />;
+  return <Car className={className} />;
+}
+
+export default function SlotGrid({
+  slots,
+  rows,
+  selectedId,
+  onSelect,
+  flashing,
+  vehicleKind = "standard",
+}) {
   const byRow = Array.from({ length: rows }, (_, row) =>
     slots.filter((slot) => slot.row === row).sort((a, b) => a.col - b.col),
   );
@@ -56,19 +64,22 @@ export default function SlotGrid({ slots, rows, selectedId, onSelect, flashing }
               {rowSlots.map((slot) => {
                 const isSelected = slot.id === selectedId;
                 const isVacant = slot.status === "vacant";
+                const kind = bayKind(slot.kind);
+                const kindOk = kind === vehicleKind;
+                const selectable = isVacant && kindOk;
                 return (
                   <button
                     key={slot.id}
                     type="button"
-                    disabled={!isVacant}
-                    onClick={() => isVacant && onSelect(slot)}
-                    aria-label={`Bay ${slot.code}, ${slot.status}`}
+                    disabled={!selectable}
+                    onClick={() => selectable && onSelect(slot)}
+                    aria-label={`Bay ${slot.code}, ${slot.status}, ${kind}`}
                     aria-pressed={isSelected}
                     className={`flex aspect-[3/4] w-full max-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg border-2 text-[11px] font-bold transition-all duration-200 ${
-                      isSelected ? SELECTED : STYLES[slot.status]
+                      isSelected ? SELECTED : selectable ? STYLES[slot.status] : DIMMED
                     } ${flashing?.has(slot.id) ? "animate-pulse-ring" : ""}`}
                   >
-                    <Car className="h-3.5 w-3.5" />
+                    <KindIcon kind={kind} />
                     <span>{slot.code}</span>
                   </button>
                 );

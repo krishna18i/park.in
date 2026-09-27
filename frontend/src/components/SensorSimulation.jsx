@@ -1,127 +1,111 @@
-import { useEffect, useState } from "react";
-import { Activity, Car, Check, Play, Radio, RotateCcw, Satellite, ScanLine } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Activity, Check, CircleDot, MapPin, Play, Radio, RotateCcw, Route, ScanLine, Sparkles, Truck, Zap } from "lucide-react";
+import { useI18n } from "../context/I18nContext";
 
 const PHASES = [
-  { label: "Bay vacant", detail: "Sensor distance: 248 cm", status: "vacant" },
-  { label: "Vehicle approaching", detail: "Edge camera detects motion", status: "approaching" },
-  { label: "Identity verified", detail: "QR / ANPR booking matched", status: "verified" },
-  { label: "Bay occupied", detail: "Sensor distance: 32 cm", status: "occupied" },
-  { label: "Network synchronized", detail: "Driver, operator and city updated", status: "synced" },
+  { label: "Understand", title: "One intent enters the network", typed: "Find parking near Jantar Mantar—or a legal loading window for a delivery vehicle.", meta: "Driver · logistics · destination · arrival", icon: MapPin, tone: "cyan" },
+  { label: "Evaluate", title: "Live capacity becomes intelligence", typed: "Checking connected parking and loading nodes against distance, price, pressure and vehicle fit…", meta: "Live bays · prediction · compatibility", icon: Activity, tone: "cyan" },
+  { label: "Rank", title: "ParkScore explains the best choice", typed: "City Palace ranks #1: 80 m away, strong availability, fair price and stable predicted pressure.", meta: "Explainable five-factor ParkScore", icon: Sparkles, tone: "orange" },
+  { label: "Reserve", title: "Exact capacity is secured", typed: "Bay A-04 is held atomically—or a loading window is reserved—so capacity cannot be double-booked.", meta: "Atomic hold · payment · QR pass", icon: CircleDot, tone: "orange" },
+  { label: "Verify", title: "The physical arrival is trusted", typed: "QR identity matches. The edge sensor confirms occupancy at 99.8% confidence.", meta: "QR gate · sensor · immutable audit", icon: ScanLine, tone: "green" },
+  { label: "Command", title: "The whole city responds", typed: "Every view updates live. City Command predicts pressure, diverts demand and governs temporary curb allocation.", meta: "84 ms sync · alerts · human approval", icon: Zap, tone: "green" },
 ];
 
+const TYPE_SPEED = 34;
+const POST_TYPE_HOLD = 220;
+
+function TypedLine({ text, phase }) {
+  const [visible, setVisible] = useState("");
+  useEffect(() => {
+    setVisible("");
+    let cursor = 0;
+    const timer = setInterval(() => {
+      cursor += 1;
+      setVisible(text.slice(0, cursor));
+      if (cursor >= text.length) clearInterval(timer);
+    }, TYPE_SPEED);
+    return () => clearInterval(timer);
+  }, [phase, text]);
+  return <span>{visible}<i className="workflow-caret" aria-hidden="true" /></span>;
+}
+
 export default function SensorSimulation() {
+  const { tl } = useI18n();
   const [phase, setPhase] = useState(0);
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState(true);
+  const phases = useMemo(() => PHASES.map((item) => ({ ...item, label: tl(item.label), title: tl(item.title), typed: tl(item.typed), meta: tl(item.meta) })), [tl]);
+  const current = phases[phase];
+  const phaseDuration = Math.max(2600, current.typed.length * TYPE_SPEED + POST_TYPE_HOLD);
 
   useEffect(() => {
     if (!running) return undefined;
-    if (phase >= PHASES.length - 1) {
-      setRunning(false);
-      return undefined;
+    if (phase >= phases.length - 1) {
+      const restart = setTimeout(() => setPhase(0), phaseDuration);
+      return () => clearTimeout(restart);
     }
-    const timer = setTimeout(() => setPhase((value) => value + 1), 1250);
+    const timer = setTimeout(() => setPhase((value) => value + 1), phaseDuration);
     return () => clearTimeout(timer);
-  }, [phase, running]);
+  }, [phase, phaseDuration, phases.length, running]);
 
-  const start = () => {
-    setPhase(0);
-    setRunning(true);
-  };
-
-  const reset = () => {
-    setRunning(false);
-    setPhase(0);
-  };
-
-  const occupied = phase >= 3;
+  const replay = () => { setPhase(0); setRunning(true); };
+  const choosePhase = (index) => { setPhase(index); setRunning(false); };
 
   return (
-    <section id="sensor-demo" className="relative overflow-hidden bg-slate-950 py-20 text-white sm:py-24">
-      <div className="absolute inset-0 sensor-section-grid" aria-hidden="true" />
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
-            <Radio className="h-3.5 w-3.5" /> Live sensor simulation
-          </span>
-          <h2 className="mt-5 font-display text-4xl font-bold leading-tight sm:text-5xl">
-            Watch one parking event update an entire city network.
-          </h2>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300">
-            Park.in is sensor-agnostic. Ultrasonic hardware, cameras, QR gates and operator actions all publish the same trusted occupancy event.
-          </p>
+    <section id="sensor-demo" className="workflow-section">
+      <div className="workflow-grid" aria-hidden="true" />
+      <div className="workflow-shell">
+        <aside className="workflow-story">
+          <div className="workflow-heading">
+            <span><Radio /> {tl("LIVE SYSTEM WALKTHROUGH")}</span>
+            <h2>{tl("Describe one journey.")}<br /><em>{tl("Watch the network do the rest.")}</em></h2>
+            <p>{tl("This is the actual Park.in workflow—from driver intent to a verified physical bay and synchronized city state.")}</p>
+          </div>
 
-          <div className="mt-8 space-y-3">
-            {PHASES.map((item, index) => (
-              <div
-                key={item.label}
-                className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-500 ${
-                  index === phase
-                    ? "border-cyan-300/50 bg-cyan-300/10"
-                    : index < phase
-                      ? "border-emerald-400/20 bg-emerald-400/5"
-                      : "border-white/5 bg-white/[0.025] opacity-55"
-                }`}
-              >
-                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold ${index <= phase ? "bg-cyan-300 text-slate-950" : "bg-white/10 text-slate-400"}`}>
-                  {index < phase ? <Check className="h-4 w-4" /> : index + 1}
-                </span>
-                <span>
-                  <b className="block text-sm">{item.label}</b>
-                  <small className="text-slate-400">{item.detail}</small>
-                </span>
+          <div className="workflow-tabs" role="tablist" aria-label={tl("Park.in workflow stages")}>
+            <i style={{ height: `${((phase + 1) / phases.length) * 100}%` }} />
+            {phases.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <button key={PHASES[index].label} type="button" role="tab" aria-selected={index === phase} className={index === phase ? "is-active" : index < phase ? "is-complete" : ""} onClick={() => choosePhase(index)}>
+                  <span>{index < phase ? <Check /> : <Icon />}</span>
+                  <b>{item.label}</b>
+                  <small>{item.title}</small>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        <div className="workflow-stage">
+          <div className="workflow-stage-head"><span><Activity /> PARK.IN ORCHESTRATOR / LIVE</span><b><i /> {tl(running ? "PLAYING" : "PAUSED")}</b></div>
+          <div className="workflow-stage-body">
+            <div className="workflow-conversation">
+              <div className="workflow-prompt-label"><Route /> {tl("CURRENT SYSTEM THOUGHT")}</div>
+              <div className="workflow-typed"><TypedLine key={`${phase}-${current.typed}`} text={current.typed} phase={phase} /></div>
+              <div className="workflow-meta"><span className={`workflow-tone-${current.tone}`}>{current.title}</span><small>{current.meta}</small></div>
+              <div className="workflow-controls">
+                <button type="button" onClick={() => setRunning((value) => !value)}><Play />{tl(running ? "Pause walkthrough" : "Continue walkthrough")}</button>
+                <button type="button" onClick={replay}><RotateCcw />{tl("Replay")}</button>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-7 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={start}
-              disabled={running}
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-orange-400 disabled:opacity-60"
-            >
-              <Play className="h-4 w-4" /> {running ? "Simulation running" : "Run arrival simulation"}
-            </button>
-            <button type="button" onClick={reset} className="inline-flex h-12 items-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-slate-200 transition hover:bg-white/10">
-              <RotateCcw className="h-4 w-4" /> Reset
-            </button>
-          </div>
-        </div>
-
-        <div className="sensor-stage" aria-live="polite">
-          <div className="sensor-stage-head">
-            <span><Activity className="h-4 w-4" /> EDGE NODE P-042</span>
-            <span className={occupied ? "text-orange-300" : "text-emerald-300"}>
-              {occupied ? "OCCUPIED" : "VACANT"}
-            </span>
-          </div>
-
-          <div className="sensor-world">
-            <div className="sensor-beam" data-active={phase >= 1} />
-            <div className="sensor-device">
-              <Satellite className="h-5 w-5" />
-              <i /><i /><i />
             </div>
-            <div className="sensor-bay" data-occupied={occupied}>
-              <span>P-042</span>
-              <b>{occupied ? "OCCUPIED" : "VACANT"}</b>
-            </div>
-            <div className="sim-car" data-phase={phase}>
-              <Car className="h-12 w-12" />
-            </div>
-            <div className="sensor-gate" data-open={phase >= 2}>
-              <ScanLine className="h-4 w-4" />
+
+            <div className="workflow-cascade" aria-live="polite" style={{ "--phase-duration": `${phaseDuration}ms` }}>
+              <div className="workflow-motion-orbit" aria-hidden="true"><i /><i /><i /></div>
+              <div className="workflow-cascade-line"><i /></div>
+              <div key={`packet-${phase}`} className={`workflow-packet workflow-tone-${current.tone}`} aria-hidden="true"><Truck /><i /><i /></div>
+              {phases.map((item, index) => {
+                const Icon = item.icon;
+                const state = index === phase ? "is-current" : index === phase - 1 ? "is-previous" : index === phase + 1 ? "is-next" : "is-dormant";
+                return <div key={PHASES[index].label} className={`workflow-event ${state}`}><span className={`workflow-event-icon workflow-tone-${item.tone}`}><Icon /></span><div><small>{item.label.toUpperCase()}</small><b>{item.title}</b><p>{item.meta}</p></div>{index < phase && <Check className="workflow-event-check" />}</div>;
+              })}
+              <div className="workflow-live-caption"><Radio /> {tl("Live event moving through the Park.in network")}</div>
             </div>
           </div>
-
-          <div className="sensor-telemetry">
-            <div><span>ULTRASONIC</span><b>{occupied ? "32 cm" : "248 cm"}</b></div>
-            <div><span>CONFIDENCE</span><b>{phase === 0 ? "99.2%" : phase < 3 ? "Analyzing" : "99.8%"}</b></div>
-            <div><span>SYNC LATENCY</span><b>{phase >= 4 ? "84 ms" : "—"}</b></div>
-          </div>
-
-          <div className={`sensor-event-toast ${phase >= 4 ? "is-visible" : ""}`}>
-            <Check className="h-4 w-4" /> Occupancy event broadcast to all dashboards
+          <div className="workflow-telemetry">
+            <div><span>{tl("CONNECTED NODES")}</span><b>{phase >= 1 ? "10 / 10" : "—"}</b></div>
+            <div><span>{tl("BAY STATE")}</span><b className={phase >= 4 ? "text-orange-300" : "text-emerald-300"}>{tl(phase >= 4 ? "OCCUPIED" : "VACANT")}</b></div>
+            <div><span>{tl("CONFIDENCE")}</span><b>{phase >= 4 ? "99.8%" : "—"}</b></div>
+            <div><span>{tl("SYNC LATENCY")}</span><b>{phase >= 5 ? "84 ms" : "—"}</b></div>
           </div>
         </div>
       </div>

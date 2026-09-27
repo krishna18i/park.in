@@ -1,11 +1,14 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { I18nProvider, useI18n } from "./context/I18nContext";
+import { I18nProvider } from "./context/I18nContext";
 import { LiveProvider } from "./context/LiveContext";
 import { ToastProvider } from "./context/ToastContext";
 import { RequireAdmin, RequireAuth } from "./components/Guards";
 import Navbar from "./components/Navbar";
+import ParkinFooter from "./components/ParkinFooter";
+import AppSplash from "./components/AppSplash";
+import ScrollToTop from "./components/ScrollToTop";
 import { LanguagePrompt } from "./components/LanguageSwitcher";
 import { Spinner } from "./components/ui";
 import Home from "./pages/Home";
@@ -31,9 +34,12 @@ function LanguageGate() {
 }
 
 function Shell() {
-  const { t } = useI18n();
+  const [showSplash, setShowSplash] = useState(true);
+  const finishSplash = useCallback(() => setShowSplash(false), []);
   return (
     <BrowserRouter>
+      <ScrollToTop />
+      {showSplash && <AppSplash onDone={finishSplash} />}
       <div className="flex min-h-screen flex-col">
         <Navbar />
         <LanguageGate />
@@ -128,9 +134,7 @@ function Shell() {
           </Routes>
           </Suspense>
         </main>
-        <footer className="border-t border-sand-200 py-6 text-center text-xs text-ink-500">
-          {t("footer")}
-        </footer>
+        <ParkinFooter />
       </div>
     </BrowserRouter>
   );

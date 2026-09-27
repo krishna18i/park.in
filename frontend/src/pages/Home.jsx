@@ -24,6 +24,7 @@ import LotsMap from "../components/LotsMap";
 import SearchBay from "../components/SearchBay";
 import UrbanNetworkVisual from "../components/UrbanNetworkVisual";
 import SensorSimulation from "../components/SensorSimulation";
+import AnimatedNumber from "../components/AnimatedNumber";
 import { money } from "../lib/format";
 
 const PLATFORM_FEATURES = [
@@ -167,12 +168,24 @@ export default function Home() {
               </button>
             </div>
             <div className="animate-rise mt-10 grid max-w-2xl grid-cols-3 gap-3 border-t border-white/10 pt-6" style={{ animationDelay: "220ms" }}>
-              <div><b className="font-display text-2xl text-white">{loading ? "—" : totalFree}</b><span className="mt-1 block text-xs text-slate-400">Live bays free</span></div>
-              <div><b className="font-display text-2xl text-white">{loading ? "—" : `${utilization}%`}</b><span className="mt-1 block text-xs text-slate-400">Network utilized</span></div>
+              <div><b className="font-display text-2xl text-white">{loading ? "—" : <AnimatedNumber value={totalFree} />}</b><span className="mt-1 block text-xs text-slate-400">Live bays free</span></div>
+              <div><b className="font-display text-2xl text-white">{loading ? "—" : <AnimatedNumber value={utilization} suffix="%" />}</b><span className="mt-1 block text-xs text-slate-400">Network utilized</span></div>
               <div><b className="font-display text-2xl text-white">&lt;100ms</b><span className="mt-1 block text-xs text-slate-400">Event sync target</span></div>
             </div>
           </div>
           <div className="animate-rise relative z-10" style={{ animationDelay: "130ms" }}><UrbanNetworkVisual free={totalFree} /></div>
+        </div>
+      </section>
+
+      <section className="network-metrics" aria-label="Live Park.in network metrics">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="network-metrics-intro"><span>NETWORK, RIGHT NOW</span><p>Measured from the live pilot state—not decorative numbers.</p></div>
+          <div className="network-metrics-grid">
+            <article className="network-metric-card"><div className="network-metric-head"><span><MapPin />LIVE CAPACITY</span><i>LIVE</i></div><b className="network-metric-value">{loading ? "—" : <AnimatedNumber value={totalFree} />}</b><h3>bays available now</h3><p>{totalBays} total bays − {occupied} occupied</p><small>Recalculated from every connected facility</small></article>
+            <article className="network-metric-card"><div className="network-metric-head"><span><Network />CONNECTED GRID</span><i>LIVE</i></div><b className="network-metric-value">{loading ? "—" : <AnimatedNumber value={locations.length} />}</b><h3>mobility nodes online</h3><p>Parking + EV + loading capacity</p><small>Each node publishes one trusted live state</small></article>
+            <article className="network-metric-card"><div className="network-metric-head"><span><BarChart3 />UTILIZATION</span><i>LIVE</i></div><b className="network-metric-value">{loading ? "—" : <AnimatedNumber value={utilization} suffix="%" />}</b><h3>network utilized</h3><p>{occupied} occupied ÷ {totalBays || 0} total bays</p><small>Automatically calculated from live occupancy</small></article>
+            <article className="network-metric-card"><div className="network-metric-head"><span><Zap />EVENT SPEED</span><i>TARGET</i></div><b className="network-metric-value">{loading ? "—" : <AnimatedNumber value={100} prefix="<" suffix=" ms" />}</b><h3>sync target</h3><p>Sensor event → every connected view</p><small>Driver, operator and City Command together</small></article>
+          </div>
         </div>
       </section>
 

@@ -132,7 +132,9 @@ export default function Checkout() {
   return (
     <div className="mx-auto max-w-2xl space-y-5 px-6 py-10">
       <div className="text-center">
-        <h1 className="font-display text-3xl font-bold text-ink-900">Confirm and pay</h1>
+        <h1 className="font-display text-3xl font-bold text-ink-900">
+          {booking?.booking_type === "logistics" ? "Confirm loading window" : "Confirm and pay"}
+        </h1>
         <p className="mt-1 text-sm text-ink-700">
           Your bay is reserved. Complete payment to get your gate ticket.
         </p>
@@ -172,6 +174,9 @@ export default function Checkout() {
             ["Until", when(booking.end_time)],
             ["Duration", duration(booking.hours)],
             ["Rate", `${money(booking.rate_per_hour)} / hour`],
+            ...(booking.booking_type === "logistics"
+              ? [["Reservation", "Urban logistics"], ["Cargo", booking.cargo_type], ...(booking.delivery_reference ? [["Manifest", booking.delivery_reference]] : [])]
+              : []),
             ...(booking.valet
               ? [["Valet", money(booking.valet_fee)]]
               : []),

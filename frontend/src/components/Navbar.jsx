@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { CircleHelp, CircleParking, LayoutDashboard, LogOut, Radio, ShieldCheck } from "lucide-react";
+import { Building2, CircleHelp, CircleParking, LayoutDashboard, LogOut, Presentation, Radio, ShieldCheck, Truck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../context/I18nContext";
 import { useLive } from "../context/LiveContext";
@@ -62,13 +62,26 @@ export default function Navbar() {
         {user ? (
           <>
             {isAdmin ? (
-              <NavItem to="/admin" icon={ShieldCheck}>
-                <span className="hidden sm:inline">{t("nav.ops")}</span>
-              </NavItem>
+              <>
+                <NavItem to="/showcase" icon={Presentation}>
+                  <span className="hidden xl:inline">Demo</span>
+                </NavItem>
+                <NavItem to="/city" icon={Building2}>
+                  <span className="hidden lg:inline">Command</span>
+                </NavItem>
+                <NavItem to="/admin" icon={ShieldCheck}>
+                  <span className="hidden lg:inline">{t("nav.ops")}</span>
+                </NavItem>
+              </>
             ) : (
-              <NavItem to="/dashboard" icon={LayoutDashboard}>
-                <span className="hidden sm:inline">{t("nav.bookings")}</span>
-              </NavItem>
+              <>
+                <NavItem to="/logistics" icon={Truck}>
+                  <span className="hidden lg:inline">Logistics</span>
+                </NavItem>
+                <NavItem to="/dashboard" icon={LayoutDashboard}>
+                  <span className="hidden sm:inline">{t("nav.bookings")}</span>
+                </NavItem>
+              </>
             )}
             <span className="hidden text-sm font-semibold text-ink-700 md:inline">
               {user.name.split(" ")[0]}

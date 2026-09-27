@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, MapPin, Navigation, ParkingSquare, Search } from "lucide-react";
+import { Car, Check, Loader2, MapPin, Navigation, ParkingSquare, Search, Sparkles, Zap } from "lucide-react";
 import { api } from "../lib/api";
 import { useI18n } from "../context/I18nContext";
 import { useToast } from "../context/ToastContext";
@@ -26,6 +26,7 @@ export default function SearchBay({ locations = [], onOpen }) {
   const [active, setActive] = useState(-1);
   const [looking, setLooking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [vehicleKind, setVehicleKind] = useState("standard");
 
   // Nearby results are a snapshot from the search call. `locations` is kept
   // live by Home over the websocket, so re-read each lot's counts from it --
@@ -110,6 +111,7 @@ export default function SearchBay({ locations = [], onOpen }) {
         q: destination,
         lat: place?.latitude,
         lng: place?.longitude,
+        vehicleKind,
       });
       setDestLabel(result.destination);
       setQuery(result.destination);
@@ -195,13 +197,21 @@ export default function SearchBay({ locations = [], onOpen }) {
   return (
     <form
       onSubmit={submit}
-      className="mx-auto mt-8 w-full max-w-xl rounded-2xl border border-sand-200 bg-white/90 p-4 text-left shadow-lg shadow-ink-900/5 backdrop-blur"
+      className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-sand-200 bg-white/95 p-4 text-left shadow-xl shadow-slate-950/10 backdrop-blur"
     >
       <label htmlFor="search-bay" className="flex items-center gap-2 text-sm font-bold text-ink-900">
         <MapPin className="h-4 w-4 text-brand-500" />
         {t("home.search.title")}
       </label>
       <p className="mt-1 text-xs text-ink-500">{t("home.search.hint")}</p>
+      <div className="mt-3 flex items-center gap-2" aria-label="Vehicle type">
+        {[["standard", Car, "Car"], ["ev", Zap, "EV"]].map(([kind, Icon, label]) => (
+          <button key={kind} type="button" onClick={() => { setVehicleKind(kind); setRawLots(null); }} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${vehicleKind === kind ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"}`}>
+            <Icon className="h-3.5 w-3.5" />{label}{vehicleKind === kind && <Check className="h-3 w-3 text-cyan-300" />}
+          </button>
+        ))}
+        <span className="ml-auto hidden items-center gap-1 text-[10px] font-bold uppercase tracking-[.12em] text-cyan-700 sm:inline-flex"><Sparkles className="h-3 w-3" /> ParkScore ranking</span>
+      </div>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <div ref={boxRef} className="relative min-w-0 flex-1">
           <input
@@ -315,22 +325,30 @@ export default function SearchBay({ locations = [], onOpen }) {
                         onMouseEnter={() => setActive(index)}
                         onClick={() => chooseLot(item)}
                       >
-                        <ParkingSquare className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
+                        <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[10px] font-black ${index === 0 ? "bg-cyan-500 text-white" : "bg-slate-100 text-slate-600"}`}>#{item.rank || index + 1}</span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-semibold text-ink-900">
+                          <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-900">
                             {item.location.name}
+                            {index === 0 && <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-cyan-800">Recommended</span>}
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-ink-500">
                             {item.location.address}
                           </span>
+                          <span className="mt-1.5 flex flex-wrap gap-1">
+                            {(item.reasons || []).map((reason) => <span key={reason} className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600">{reason}</span>)}
+                          </span>
+                          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[9px] text-slate-400">
+                            <span>Distance {Math.round(item.factors?.distance || 0)}</span>
+                            <span>Capacity {Math.round(item.factors?.availability || 0)}</span>
+                            <span>Forecast {Math.round(item.factors?.prediction || 0)}</span>
+                            <span>Price {Math.round(item.factors?.price || 0)}</span>
+                          </span>
                         </span>
                         <span className="shrink-0 text-right">
-                          <span className="block text-sm font-bold text-teal-700">
-                            {distanceLabel(item.distance_km, t)}
-                          </span>
-                          <span className="text-[11px] text-ink-500">
-                            {t("home.search.free", { n: item.location.available_slots })}
-                          </span>
+                          <span className="block font-display text-xl font-extrabold text-cyan-700">{Math.round(item.park_score || 0)}</span>
+                          <span className="block text-[9px] font-bold uppercase tracking-wide text-slate-400">ParkScore</span>
+                          <span className="mt-1 block text-xs font-bold text-teal-700">{distanceLabel(item.distance_km, t)}</span>
+                          <span className="text-[11px] text-ink-500">{item.compatible_bays ?? item.location.available_slots} compatible</span>
                         </span>
                       </button>
                     </li>

@@ -43,6 +43,8 @@ class SlotKind(str, Enum):
     EV = "ev"
     VALET = "valet"
     HEAVY = "heavy"
+    ACCESSIBLE = "accessible"
+    EMERGENCY = "emergency"
 
 
 class BookingStatus(str, Enum):
@@ -52,6 +54,11 @@ class BookingStatus(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     EXPIRED = "expired"
+
+
+class BookingType(str, Enum):
+    PARKING = "parking"
+    LOGISTICS = "logistics"
 
 
 class PaymentMethod(str, Enum):
@@ -96,6 +103,13 @@ class Location(Base):
     address: Mapped[str] = mapped_column(String(400))
     description: Mapped[str] = mapped_column(String(400), default="")
     image_url: Mapped[str] = mapped_column(String(600), default="")
+
+    # How a driver reaches the humans who run this lot. Shown on every bay, so
+    # someone staring at a taken bay always has a way to ask about it.
+    contact_name: Mapped[str] = mapped_column(String(120), default="")
+    contact_phone: Mapped[str] = mapped_column(String(20), default="")
+    contact_email: Mapped[str] = mapped_column(String(255), default="")
+
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     rows: Mapped[int] = mapped_column(Integer, default=5)
@@ -155,6 +169,9 @@ class Booking(Base):
     amount: Mapped[float] = mapped_column(Float)
     valet: Mapped[bool] = mapped_column(Boolean, default=False)
     valet_fee: Mapped[float] = mapped_column(Float, default=0.0)
+    booking_type: Mapped[str] = mapped_column(String(16), default=BookingType.PARKING.value, index=True)
+    cargo_type: Mapped[str] = mapped_column(String(80), default="")
+    delivery_reference: Mapped[str] = mapped_column(String(80), default="")
 
     status: Mapped[str] = mapped_column(String(16), default=BookingStatus.PENDING.value, index=True)
     ticket_code: Mapped[str] = mapped_column(String(16), unique=True, index=True)
@@ -229,5 +246,55 @@ class Feedback(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
-
     booking: Mapped["Booking"] = relationship(back_populates="feedback")
+
+
+class SensorEvent(Base):
+    """Immutable audit record for one edge observation."""
+
+    __tablename__ = "sensor_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    device_id: Mapped[str] = mapped_column(String(80), index=True)
+    slot_id: Mapped[str] = mapped_column(String(36), index=True)
+    location_id: Mapped[str] = mapped_column(String(36), index=True)
+    observed_status: Mapped[str] = mapped_column(String(16))
+    previous_status: Mapped[str] = mapped_column(String(16))
+    distance_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    source: Mapped[str] = mapped_column(String(24), default="ultrasonic")
+    applied: Mapped[bool] = mapped_column(Boolean, default=False)
+    action: Mapped[str] = mapped_column(String(80), default="recorded")
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+
+
+class DynamicAllocation(Base):
+    __tablename__ = "dynamic_allocations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    slot_id: Mapped[str] = mapped_column(String(36), index=True)
+    location_id: Mapped[str] = mapped_column(String(36), index=True)
+    previous_kind: Mapped[str] = mapped_column(String(16))
+    allocated_kind: Mapped[str] = mapped_column(String(16))
+    reason: Mapped[str] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(String(16), default="active", index=True)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reverted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(36))
+
+
+class Incident(Base):
+    __tablename__ = "incidents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    location_id: Mapped[str] = mapped_column(String(36), index=True)
+    slot_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    category: Mapped[str] = mapped_column(String(40))
+    severity: Mapped[str] = mapped_column(String(16), default="medium", index=True)
+    description: Mapped[str] = mapped_column(String(500))
+    source: Mapped[str] = mapped_column(String(24), default="authority")
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+

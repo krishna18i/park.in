@@ -124,7 +124,7 @@ export default function Ticket() {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-widest opacity-80">
-                Parking pass
+                {booking.booking_type === "logistics" ? "Loading-zone pass" : "Parking pass"}
               </p>
               <h2 className="mt-0.5 truncate font-display text-2xl font-bold">
                 {booking.location_name}
@@ -165,6 +165,7 @@ export default function Ticket() {
               ["Until", when(booking.end_time)],
               ["Duration", duration(booking.hours)],
               ["Paid", money(booking.amount)],
+              ...(booking.booking_type === "logistics" ? [["Purpose", "Urban logistics"], ["Cargo", booking.cargo_type], ...(booking.delivery_reference ? [["Manifest", booking.delivery_reference]] : [])] : []),
               ...(booking.valet ? [["Valet", money(booking.valet_fee)]] : []),
             ].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">

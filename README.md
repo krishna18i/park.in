@@ -1,8 +1,7 @@
 # Park.in
 
-**Smart parking for Jaipur's heritage sites.** Reserve a numbered bay at Hawa Mahal,
-City Palace, Jal Mahal or Nahargarh Fort before you leave home, pay in the app, and
-show a QR ticket at the gate.
+**A shared operating layer for urban parking, logistics and city intervention.**
+The bundled Jaipur locations are a deterministic pilot dataset, not the product boundary.
 
 Every bay in the lot repaints live — book one on your phone and it turns amber on the
 operator's screen in the same instant.
@@ -41,7 +40,11 @@ Open **http://localhost:5173**. The database creates and seeds itself on first b
 
 The login screen has one-click buttons for both, so nobody has to type them on stage.
 
-> Reset everything: stop the server, delete `backend/parkin.db`, start it again.
+> Presentation reset: sign in as the operator, open `/showcase`, press **Reset scenario**,
+> then **Confirm reset**. Set `DEMO_RESET_ENABLED=false` outside demo deployments.
+
+For the exact external-round narration, rehearsal checklist and judge Q&A, see
+[`docs/EXTERNAL_ROUND_SCRIPT.md`](docs/EXTERNAL_ROUND_SCRIPT.md).
 
 ---
 
@@ -160,8 +163,8 @@ cd backend
 ../.venv/Scripts/python -m pytest
 ```
 
-22 tests covering the full lifecycle, double-booking rejection, cancellation, ticket
-gating before payment, role enforcement, pricing rules, and a live WebSocket broadcast.
+66 tests cover the booking lifecycle, logistics constraints, sensor ingestion,
+governance, role enforcement, payments, feedback and realtime state changes.
 
 ---
 

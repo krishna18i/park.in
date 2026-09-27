@@ -13,9 +13,9 @@ from .config import CORS_ORIGINS, EXPIRY_SWEEP_SECONDS, FRONTEND_DIST, SEED_ON_S
 from .database import Base, SessionLocal, engine, ensure_schema
 from .realtime import manager
 from .predict import fit_all
-from .routers import admin, auth, bookings, feedback, locations, payments
+from .routers import admin, auth, bookings, feedback, governance, iot, locations, payments
 from .seed import seed
-from .services import expire_stale_bookings, slot_event
+from .services import expire_dynamic_allocations, expire_stale_bookings, slot_event
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s  %(levelname)-7s %(name)s  %(message)s"
@@ -35,10 +35,13 @@ async def _expiry_sweeper() -> None:
             db = SessionLocal()
             try:
                 freed = expire_stale_bookings(db)
-                for slot in freed:
+                restored = expire_dynamic_allocations(db)
+                for slot in [*freed, *restored]:
                     await manager.broadcast("slot.updated", slot_event(slot))
                 if freed:
                     logger.info("expired %d unpaid reservation(s)", len(freed))
+                if restored:
+                    logger.info("restored %d expired dynamic allocation(s)", len(restored))
             finally:
                 db.close()
         except asyncio.CancelledError:
@@ -99,6 +102,8 @@ api.include_router(bookings.router)
 api.include_router(payments.router)
 api.include_router(admin.router)
 api.include_router(feedback.router)
+api.include_router(iot.router)
+api.include_router(governance.router)
 
 
 @api.get("/health", tags=["meta"])

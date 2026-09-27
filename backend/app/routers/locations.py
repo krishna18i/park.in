@@ -193,6 +193,84 @@ SEARCH_RADIUS_KM = 2.0
 SEARCH_MAX_LOTS = 5
 
 
+def _compatible_vacancies(db: Session, location_ids: list[str], kind: str) -> dict[str, int]:
+    if not location_ids:
+        return {}
+    rows = db.execute(
+        select(Slot.location_id, func.count(Slot.id))
+        .where(
+            Slot.location_id.in_(location_ids),
+            Slot.status == SlotStatus.VACANT.value,
+            Slot.kind == kind,
+        )
+        .group_by(Slot.location_id)
+    ).all()
+    return {location_id: int(count) for location_id, count in rows}
+
+
+def _park_score_rows(
+    db: Session,
+    nearby: list[tuple[Location, float]],
+    counts: dict[str, tuple[int, int]],
+    vehicle_kind: str,
+) -> list[dict]:
+    """Rank nearby capacity with an explainable 0-100 score.
+
+    Distance matters most, but a slightly farther lot can win when it has much
+    healthier live/predicted capacity or a better price. Every factor returned
+    here is displayed to the driver instead of hiding the decision in a black box.
+    """
+    compatible = _compatible_vacancies(db, [location.id for location, _ in nearby], vehicle_kind)
+    prices = [location.price_per_hour for location, _ in nearby] or [0]
+    low_price, high_price = min(prices), max(prices)
+    rows = []
+    for location, distance in nearby:
+        total, vacant = counts.get(location.id, (0, 0))
+        prediction = forecast(location.id, hours=1)["hours"][0]["occupancy_pct"]
+        distance_factor = max(0.0, 100.0 - min(distance, SEARCH_RADIUS_KM) / SEARCH_RADIUS_KM * 100.0)
+        availability_factor = 100.0 * vacant / total if total else 0.0
+        prediction_factor = max(0.0, 100.0 - prediction)
+        price_factor = 100.0 if high_price == low_price else 100.0 * (high_price - location.price_per_hour) / (high_price - low_price)
+        compatible_count = compatible.get(location.id, 0)
+        compatibility_factor = min(100.0, 60.0 + compatible_count * 10.0) if compatible_count else 0.0
+        factors = {
+            "distance": round(distance_factor, 1),
+            "availability": round(availability_factor, 1),
+            "prediction": round(prediction_factor, 1),
+            "price": round(price_factor, 1),
+            "compatibility": round(compatibility_factor, 1),
+        }
+        score = (
+            factors["distance"] * 0.30
+            + factors["availability"] * 0.25
+            + factors["prediction"] * 0.20
+            + factors["price"] * 0.15
+            + factors["compatibility"] * 0.10
+        )
+        reasons = []
+        if distance <= 0.6:
+            reasons.append("Closest to your destination")
+        if availability_factor >= 45:
+            reasons.append("Strong live availability")
+        if prediction <= 55:
+            reasons.append("Lower predicted pressure")
+        if location.price_per_hour == low_price:
+            reasons.append("Best price nearby")
+        if compatible_count:
+            reasons.append(f"{compatible_count} compatible bays free")
+        rows.append({
+            "location": location,
+            "distance": distance,
+            "score": round(score, 1),
+            "prediction": round(prediction, 1),
+            "compatible": compatible_count,
+            "factors": factors,
+            "reasons": reasons[:3],
+        })
+    rows.sort(key=lambda row: (-row["score"], row["distance"]))
+    return rows
+
+
 def _pick_nearest_open_lot(
     dest_lat: float, dest_lng: float, locations: list[Location], counts: dict[str, tuple[int, int]]
 ) -> tuple[Location, float, bool]:
@@ -246,6 +324,7 @@ def nearby_open_bays(
     q: str = Query(..., min_length=2, max_length=200),
     lat: float | None = Query(default=None, ge=-90, le=90),
     lng: float | None = Query(default=None, ge=-180, le=180),
+    vehicle_kind: SlotKind = Query(default=SlotKind.STANDARD),
     db: Session = Depends(get_db),
 ) -> NearbyLotsOut:
     """Up to five registered lots with a free bay inside 2 km of the destination."""
@@ -256,14 +335,25 @@ def nearby_open_bays(
         dest_lat, dest_lng, locations, counts, radius_km=SEARCH_RADIUS_KM
     )
     nearby = ranked[:SEARCH_MAX_LOTS]
+    requested_kind = bay_kind(vehicle_kind)
+    scored = _park_score_rows(db, nearby, counts, requested_kind)
     return NearbyLotsOut(
         destination=dest_label,
         destination_latitude=round(dest_lat, 6),
         destination_longitude=round(dest_lng, 6),
         driving=used_driving,
         lots=[
-            NearbyLotOut(location=_to_out(location, counts), distance_km=round(distance, 2))
-            for location, distance in nearby
+            NearbyLotOut(
+                location=_to_out(row["location"], counts),
+                distance_km=round(row["distance"], 2),
+                rank=index + 1,
+                park_score=row["score"],
+                predicted_occupancy=row["prediction"],
+                compatible_bays=row["compatible"],
+                factors=row["factors"],
+                reasons=row["reasons"],
+            )
+            for index, row in enumerate(scored)
         ],
     )
 

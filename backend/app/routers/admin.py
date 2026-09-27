@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from ..config import DEMO_RESET_ENABLED
 from ..database import get_db
 from ..models import (
     Booking,
@@ -19,9 +20,26 @@ from ..models import (
 )
 from ..schemas import BookingOut, SlotOut, SlotStatusIn, StatsOut, TicketActionOut, VerifyTicketIn, to_booking_out
 from ..security import current_admin
+from ..seed import reset_demo
+from ..predict import fit_all
+from ..realtime import manager
 from ..services import announce_slot, set_slot_status
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.post("/reset-demo")
+async def reset_demo_scenario(
+    db: Session = Depends(get_db),
+    _: User = Depends(current_admin),
+) -> dict:
+    """Restore the fixed judging dataset; disabled with DEMO_RESET_ENABLED=false."""
+    if not DEMO_RESET_ENABLED:
+        raise HTTPException(status_code=403, detail="Demo reset is disabled")
+    reset_demo(db)
+    fit_all(db)
+    await manager.broadcast("demo.reset", {"message": "Presentation scenario restored"})
+    return {"message": "Presentation scenario restored", "credentials_preserved": True}
 
 
 @router.get("/stats", response_model=StatsOut)

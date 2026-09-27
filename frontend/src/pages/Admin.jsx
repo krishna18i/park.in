@@ -29,6 +29,9 @@ const BLANK_LOCATION = {
   address: "",
   description: "",
   image_url: "",
+  contact_name: "",
+  contact_phone: "",
+  contact_email: "",
   rows: 4,
   cols: 6,
   price_per_hour: 50,
@@ -119,6 +122,12 @@ function Scanner({ onSettled }) {
             <p className="mt-0.5 text-xs opacity-80">
               {result.booking.location_name} - {result.booking.vehicle_number}
             </p>
+            {result.booking.booking_type === "logistics" && (
+              <p className="mt-1 text-xs font-semibold">
+                Logistics · {result.booking.cargo_type}
+                {result.booking.delivery_reference ? ` · ${result.booking.delivery_reference}` : ""}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -185,6 +194,36 @@ function NewLocationForm({ onCreated }) {
         </div>
         <Field label="Image URL" htmlFor="loc-image" hint="Optional.">
           <Input id="loc-image" value={form.image_url} onChange={update("image_url")} />
+        </Field>
+        <Field
+          label="Contact desk"
+          htmlFor="loc-contact-name"
+          hint="Who picks up. Shown on every bay."
+        >
+          <Input
+            id="loc-contact-name"
+            value={form.contact_name}
+            onChange={update("contact_name")}
+            placeholder="Hawa Mahal Parking Desk"
+          />
+        </Field>
+        <Field label="Contact phone" htmlFor="loc-contact-phone" hint="Drivers tap to call.">
+          <Input
+            id="loc-contact-phone"
+            type="tel"
+            value={form.contact_phone}
+            onChange={update("contact_phone")}
+            placeholder="+91 98290 10101"
+          />
+        </Field>
+        <Field label="Contact email" htmlFor="loc-contact-email" hint="Drivers tap to write.">
+          <Input
+            id="loc-contact-email"
+            type="email"
+            value={form.contact_email}
+            onChange={update("contact_email")}
+            placeholder="desk@lot.example"
+          />
         </Field>
         <Field label="Rate per hour" htmlFor="loc-rate">
           <Input
@@ -264,6 +303,9 @@ function locationToForm(location) {
     address: location.address,
     description: location.description || "",
     image_url: location.image_url || "",
+    contact_name: location.contact_name || "",
+    contact_phone: location.contact_phone || "",
+    contact_email: location.contact_email || "",
     price_per_hour: location.price_per_hour,
     valet_enabled: Boolean(location.valet_enabled),
     valet_price_per_hour: location.valet_price_per_hour ?? 80,
@@ -296,6 +338,9 @@ function LocationEditor({ location, onSaved }) {
         address: form.address,
         description: form.description,
         image_url: form.image_url,
+        contact_name: form.contact_name,
+        contact_phone: form.contact_phone,
+        contact_email: form.contact_email,
         price_per_hour: Number(form.price_per_hour),
         valet_enabled: Boolean(form.valet_enabled),
         valet_price_per_hour: Number(form.valet_price_per_hour),
@@ -356,6 +401,36 @@ function LocationEditor({ location, onSaved }) {
           id={`edit-image-${location.id}`}
           value={form.image_url}
           onChange={update("image_url")}
+        />
+      </Field>
+      <Field label="Contact desk" htmlFor={`edit-contact-name-${location.id}`}>
+        <Input
+          id={`edit-contact-name-${location.id}`}
+          value={form.contact_name}
+          onChange={update("contact_name")}
+          placeholder="Parking desk"
+        />
+      </Field>
+      <Field
+        label="Contact phone"
+        htmlFor={`edit-contact-phone-${location.id}`}
+        hint="Shown on every bay."
+      >
+        <Input
+          id={`edit-contact-phone-${location.id}`}
+          type="tel"
+          value={form.contact_phone}
+          onChange={update("contact_phone")}
+          placeholder="+91 98290 10101"
+        />
+      </Field>
+      <Field label="Contact email" htmlFor={`edit-contact-email-${location.id}`}>
+        <Input
+          id={`edit-contact-email-${location.id}`}
+          type="email"
+          value={form.contact_email}
+          onChange={update("contact_email")}
+          placeholder="desk@lot.example"
         />
       </Field>
       <Field label="Rate per hour" htmlFor={`edit-rate-${location.id}`}>
@@ -694,7 +769,7 @@ export default function Admin() {
             <table className="w-full min-w-[46rem] text-left text-sm">
               <thead className="bg-sand-50 text-xs uppercase tracking-wide text-ink-500">
                 <tr>
-                  {["Location", "Bay", "Vehicle", "From", "Amount", "Valet", "Rating", "Status"].map((heading) => (
+                  {["Location", "Bay", "Vehicle", "Type", "From", "Amount", "Valet", "Rating", "Status"].map((heading) => (
                     <th key={heading} className="px-4 py-2.5 font-semibold">
                       {heading}
                     </th>
@@ -711,6 +786,11 @@ export default function Admin() {
                       </td>
                       <td className="px-4 py-2.5 font-semibold">{booking.slot_code}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{booking.vehicle_number}</td>
+                      <td className="px-4 py-2.5 text-xs">
+                        {booking.booking_type === "logistics" ? (
+                          <span className="font-semibold text-orange-700" title={booking.delivery_reference || booking.cargo_type}>Logistics · {booking.cargo_type}</span>
+                        ) : "Parking"}
+                      </td>
                       <td className="px-4 py-2.5 text-ink-500">{when(booking.start_time)}</td>
                       <td className="px-4 py-2.5 font-semibold">{money(booking.amount)}</td>
                       <td className="px-4 py-2.5 text-xs">{booking.valet ? "Yes" : "—"}</td>

@@ -8,18 +8,21 @@ import logging
 import random
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from .models import (
     Booking,
     BookingStatus,
     Feedback,
+    DynamicAllocation,
+    Incident,
     Location,
     Payment,
     PaymentMethod,
     PaymentStatus,
     Role,
+    SensorEvent,
     Slot,
     SlotStatus,
     User,
@@ -39,6 +42,9 @@ DEMO_USER = {"email": "demo@parkin.app", "password": "demo123", "name": "Aarav S
 LOCATIONS = [
     {
         "name": "Hawa Mahal",
+        "contact_name": "Hawa Mahal Parking Desk",
+        "contact_phone": "+919829010101",
+        "contact_email": "hawamahal@parkin.app",
         "address": "Hawa Mahal Rd, Badi Choupad, Jaipur",
         "description": "Palace of Winds -- the pink sandstone icon of the old city.",
         "image_url": "https://images.unsplash.com/photo-1701087366618-112f1b333a9f?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
@@ -52,6 +58,9 @@ LOCATIONS = [
     },
     {
         "name": "City Palace",
+        "contact_name": "City Palace Parking Desk",
+        "contact_phone": "+919829010202",
+        "contact_email": "citypalace@parkin.app",
         "address": "Tulsi Marg, Gangori Bazaar, Jaipur",
         "description": "Royal residence with museums, courtyards and the Peacock Gate.",
         "image_url": "https://images.unsplash.com/photo-1607160913575-9854cbecca02?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
@@ -65,6 +74,9 @@ LOCATIONS = [
     },
     {
         "name": "Jal Mahal",
+        "contact_name": "Jal Mahal Parking Desk",
+        "contact_phone": "+919829010303",
+        "contact_email": "jalmahal@parkin.app",
         "address": "Amer Rd, Jal Mahal, Jaipur",
         "description": "The Water Palace, adrift in the middle of Man Sagar Lake.",
         "image_url": "https://images.unsplash.com/photo-1599661046289-e31897846e41?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
@@ -78,6 +90,9 @@ LOCATIONS = [
     },
     {
         "name": "Nahargarh Fort",
+        "contact_name": "Nahargarh Parking Desk",
+        "contact_phone": "+919829010404",
+        "contact_email": "nahargarh@parkin.app",
         "address": "Krishna Nagar, Brahampuri, Jaipur",
         "description": "Hilltop fort with the city spread out below it at sunset.",
         "image_url": "https://images.unsplash.com/photo-1609137144813-7d9921338f24?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
@@ -107,6 +122,10 @@ def backfill_demo_fields(db: Session) -> None:
             location.valet_enabled = True
             location.valet_price_per_hour = spec["valet_price_per_hour"]
             changed = True
+        for field in ("contact_name", "contact_phone", "contact_email"):
+            if not getattr(location, field, "") and spec.get(field):
+                setattr(location, field, spec[field])
+                changed = True
         for slot in location.slots:
             expected = slot_kind_for(slot.row, slot.col, location.rows, location.cols)
             if slot.kind != expected:
@@ -125,6 +144,14 @@ def _plate() -> str:
 
 
 def _make_user(db: Session, spec: dict, role: Role, phone: str) -> User:
+    existing = db.execute(select(User).where(User.email == spec["email"])).scalar_one_or_none()
+    if existing is not None:
+        existing.name = spec["name"]
+        existing.phone = phone
+        existing.password_hash = hash_password(spec["password"])
+        existing.role = role.value
+        existing.auth_provider = "password"
+        return existing
     user = User(
         email=spec["email"],
         name=spec["name"],
@@ -135,6 +162,19 @@ def _make_user(db: Session, spec: dict, role: Role, phone: str) -> User:
     )
     db.add(user)
     return user
+
+
+def reset_demo(db: Session) -> None:
+    """Restore the deterministic stage scenario while preserving user sessions.
+
+    This intentionally clears operational records and locations. It is exposed
+    only through the admin-only, configuration-gated presentation endpoint.
+    """
+    for model in (Feedback, Payment, Booking, SensorEvent, DynamicAllocation, Incident, Slot, Location):
+        db.execute(delete(model))
+    db.commit()
+    RNG.seed(20260820)
+    seed(db)
 
 
 def _make_booking(

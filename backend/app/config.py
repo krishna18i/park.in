@@ -30,6 +30,8 @@ RESERVATION_HOLD_MINUTES = int(os.getenv("RESERVATION_HOLD_MINUTES", "10"))
 EXPIRY_SWEEP_SECONDS = int(os.getenv("EXPIRY_SWEEP_SECONDS", "20"))
 
 SEED_ON_STARTUP = os.getenv("SEED_ON_STARTUP", "true").lower() in {"1", "true", "yes"}
+# Keep the stage reset explicit and removable for a production deployment.
+DEMO_RESET_ENABLED = os.getenv("DEMO_RESET_ENABLED", "true").lower() in {"1", "true", "yes"}
 
 # The built web app. When this directory exists the API also serves the React
 # bundle, so a deployment is one process on one origin -- no CORS, no API host
@@ -53,3 +55,7 @@ GOOGLE_ALLOW_DEMO = os.getenv("GOOGLE_ALLOW_DEMO", "true").lower() in {"1", "tru
 # Optional Maps key. Destination search uses Google Geocoding + Places when set,
 # otherwise OpenStreetMap (Photon / Nominatim) biased to Jaipur.
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
+
+# Edge devices authenticate with this key in X-Device-Key. Administrators can
+# use their normal JWT for the Sensor Lab. Replace the demo value in production.
+SENSOR_INGEST_KEY = os.getenv("SENSOR_INGEST_KEY", "dev-sensor-key-change-me").strip()

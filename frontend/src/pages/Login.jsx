@@ -25,13 +25,13 @@ export default function Login() {
 
   const go = (user) => {
     if (user.role === "admin") {
-      navigate("/admin", { replace: true });
+      navigate("/city", { replace: true });
       return;
     }
     const from = location.state?.from;
     const resumeBooking =
       typeof from === "string" &&
-      ["/lot/", "/checkout/", "/ticket/"].some((prefix) => from.startsWith(prefix));
+      ["/lot/", "/checkout/", "/ticket/", "/logistics"].some((prefix) => from.startsWith(prefix));
     navigate(resumeBooking ? from : "/#locations", { replace: true });
   };
 

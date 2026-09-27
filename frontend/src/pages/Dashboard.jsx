@@ -7,6 +7,7 @@ import {
   MessageSquareHeart,
   QrCode,
   Ticket as TicketIcon,
+  Truck,
   X,
 } from "lucide-react";
 import { api } from "../lib/api";
@@ -40,6 +41,9 @@ function BookingRow({ booking, onCancel, busy }) {
               {booking.location_name}
             </h3>
             <Badge className={style.className}>{style.label}</Badge>
+            {booking.booking_type === "logistics" && (
+              <Badge className="bg-orange-100 text-orange-700"><Truck className="h-3 w-3" /> Logistics</Badge>
+            )}
           </div>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-500">
             <span className="inline-flex items-center gap-1">
@@ -51,6 +55,11 @@ function BookingRow({ booking, onCancel, busy }) {
               {when(booking.start_time)} - {duration(booking.hours)}
             </span>
           </p>
+          {booking.booking_type === "logistics" && (
+            <p className="mt-1.5 text-xs font-medium text-orange-700">
+              {booking.cargo_type}{booking.delivery_reference ? ` · ${booking.delivery_reference}` : ""}
+            </p>
+          )}
           {finished && booking.rating > 0 && (
             <div className="mt-1.5 flex items-center gap-1.5">
               <StarRating value={booking.rating} size="sm" label={t("fb.overall")} />
@@ -179,7 +188,7 @@ export default function Dashboard() {
               </Button>
             }
           >
-            Reserve a bay at any of Jaipur's heritage sites and it will show up here.
+            Reserve a bay anywhere on the Park.in network and it will show up here.
           </EmptyState>
         </Card>
       ) : (

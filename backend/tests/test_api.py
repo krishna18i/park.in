@@ -55,9 +55,30 @@ def _first_vacant(client, location_id: str) -> dict:
     return vacant[0]
 
 
+def _first_vacant_kind(client, location_id: str, kind: str) -> dict | None:
+    slots = client.get(f"/api/locations/{location_id}/slots").json()
+    return next((slot for slot in slots if slot["status"] == "vacant" and slot["kind"] == kind), None)
+
+
 # ------------------------------------------------------------------ basics
 def test_health(client):
     assert client.get("/api/health").json()["status"] == "ok"
+
+
+def test_admin_can_restore_demo_scenario(client, admin_headers):
+    before = client.get("/api/admin/stats", headers=admin_headers).json()
+    response = client.post("/api/admin/reset-demo", headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json()["credentials_preserved"] is True
+    after = client.get("/api/admin/stats", headers=admin_headers).json()
+    assert after["total_locations"] == len(LOCATIONS)
+    assert after["total_slots"] > 0
+    assert after["total_bookings"] > 0
+    assert before["total_locations"] == after["total_locations"]
+
+
+def test_demo_reset_is_admin_only(client, user_headers):
+    assert client.post("/api/admin/reset-demo", headers=user_headers).status_code == 403
 
 
 def test_seed_created_locations(client):
@@ -99,8 +120,130 @@ def test_protected_route_requires_token(client):
     assert client.get("/api/bookings").status_code == 401
 
 
+def test_sensor_ingestion_requires_device_or_admin(client):
+    response = client.post(
+        "/api/iot/events",
+        json={"device_id": "EDGE-TEST-1", "slot_id": "missing", "observed_status": "occupied"},
+    )
+    assert response.status_code == 401
+
+
 def test_admin_route_forbidden_for_user(client, user_headers):
     assert client.get("/api/admin/stats", headers=user_headers).status_code == 403
+
+
+def test_sensor_event_changes_real_bay_and_is_audited(client, admin_headers):
+    location = client.get("/api/locations").json()[0]
+    slot = _first_vacant(client, location["id"])
+    payload = {
+        "device_id": "EDGE-DEMO-A1",
+        "slot_id": slot["id"],
+        "observed_status": "occupied",
+        "distance_cm": 31.8,
+        "confidence": 0.998,
+        "source": "ultrasonic",
+    }
+    arrived = client.post(
+        "/api/iot/events",
+        json=payload,
+        headers={"X-Device-Key": "dev-sensor-key-change-me"},
+    )
+    assert arrived.status_code == 201, arrived.text
+    assert arrived.json()["applied"] is True
+    assert arrived.json()["action"] == "unauthorised_presence_detected"
+    assert _slot_status(client, location["id"], slot["id"]) == "occupied"
+
+    audit = client.get("/api/iot/events", headers=admin_headers)
+    assert audit.status_code == 200
+    assert audit.json()[0]["device_id"] == "EDGE-DEMO-A1"
+
+    departed = client.post(
+        "/api/iot/events",
+        json={**payload, "observed_status": "vacant", "distance_cm": 248},
+        headers=admin_headers,
+    )
+    assert departed.status_code == 201
+    assert departed.json()["action"] == "vacancy_applied"
+    assert _slot_status(client, location["id"], slot["id"]) == "vacant"
+
+
+def test_low_confidence_sensor_event_is_recorded_not_applied(client, admin_headers):
+    location = client.get("/api/locations").json()[0]
+    slot = _first_vacant(client, location["id"])
+    response = client.post(
+        "/api/iot/events",
+        json={
+            "device_id": "EDGE-NOISY-1",
+            "slot_id": slot["id"],
+            "observed_status": "occupied",
+            "distance_cm": 90,
+            "confidence": 0.42,
+            "source": "ultrasonic",
+        },
+        headers=admin_headers,
+    )
+    assert response.status_code == 201
+    assert response.json()["applied"] is False
+    assert response.json()["action"] == "low_confidence_recorded"
+    assert _slot_status(client, location["id"], slot["id"]) == "vacant"
+
+
+def test_dynamic_allocation_is_audited_and_reversible(client, admin_headers):
+    location = client.get("/api/locations").json()[0]
+    slot = _first_vacant_kind(client, location["id"], "standard")
+    assert slot is not None
+    created = client.post(
+        "/api/governance/allocations",
+        json={
+            "slot_id": slot["id"],
+            "allocated_kind": "emergency",
+            "reason": "Temporary ambulance staging for city event",
+            "duration_minutes": 60,
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    allocation = created.json()
+    assert allocation["previous_kind"] == "standard"
+    assert allocation["allocated_kind"] == "emergency"
+    changed = client.get(f"/api/locations/{location['id']}/slots").json()
+    assert next(item for item in changed if item["id"] == slot["id"])["kind"] == "emergency"
+
+    active = client.get("/api/governance/allocations?active_only=true", headers=admin_headers)
+    assert any(item["id"] == allocation["id"] for item in active.json())
+    reverted = client.post(
+        f"/api/governance/allocations/{allocation['id']}/revert",
+        headers=admin_headers,
+    )
+    assert reverted.status_code == 200
+    assert reverted.json()["status"] == "reverted"
+    restored = client.get(f"/api/locations/{location['id']}/slots").json()
+    assert next(item for item in restored if item["id"] == slot["id"])["kind"] == "standard"
+
+
+def test_incident_response_lifecycle(client, admin_headers):
+    location = client.get("/api/locations").json()[0]
+    created = client.post(
+        "/api/governance/incidents",
+        json={
+            "location_id": location["id"],
+            "category": "blocked_access",
+            "severity": "high",
+            "description": "Delivery vehicle is blocking the emergency lane",
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    incident = created.json()
+    assert incident["status"] == "open"
+    open_rows = client.get("/api/governance/incidents?status=open", headers=admin_headers).json()
+    assert any(row["id"] == incident["id"] for row in open_rows)
+    resolved = client.post(
+        f"/api/governance/incidents/{incident['id']}/resolve",
+        headers=admin_headers,
+    )
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
 
 
 # ------------------------------------------------------------------ booking flow
@@ -175,6 +318,100 @@ def test_full_booking_lifecycle(client, user_headers, admin_headers):
 def _slot_status(client, location_id: str, slot_id: str) -> str:
     slots = client.get(f"/api/locations/{location_id}/slots").json()
     return next(s["status"] for s in slots if s["id"] == slot_id)
+
+
+def test_logistics_booking_requires_heavy_bay(client, user_headers):
+    location = client.get("/api/locations").json()[0]
+    standard = _first_vacant_kind(client, location["id"], "standard")
+    assert standard is not None
+    start, end = _slot_times(1)
+
+    response = client.post(
+        "/api/bookings",
+        json={
+            "slot_id": standard["id"],
+            "vehicle_number": "RJ14LG2026",
+            "start_time": start,
+            "end_time": end,
+            "booking_type": "logistics",
+            "cargo_type": "Courier parcels",
+        },
+        headers=user_headers,
+    )
+    assert response.status_code == 400
+    assert "heavy/loading bay" in response.json()["detail"]
+
+
+def test_logistics_booking_and_dwell_limit(client, user_headers):
+    locations = client.get("/api/locations").json()
+    choice = next(
+        (
+            (location, slot)
+            for location in locations
+            if (slot := _first_vacant_kind(client, location["id"], "heavy")) is not None
+        ),
+        None,
+    )
+    assert choice is not None, "seed should leave a heavy bay available"
+    location, slot = choice
+
+    long_start, long_end = _slot_times(3)
+    too_long = client.post(
+        "/api/bookings",
+        json={
+            "slot_id": slot["id"],
+            "vehicle_number": "RJ14LG2026",
+            "start_time": long_start,
+            "end_time": long_end,
+            "booking_type": "logistics",
+            "cargo_type": "Retail supplies",
+        },
+        headers=user_headers,
+    )
+    assert too_long.status_code == 400
+    assert "capped at 2 hours" in too_long.json()["detail"]
+
+    start, end = _slot_times(1)
+    created = client.post(
+        "/api/bookings",
+        json={
+            "slot_id": slot["id"],
+            "vehicle_number": "RJ14LG2026",
+            "start_time": start,
+            "end_time": end,
+            "booking_type": "logistics",
+            "cargo_type": "Retail supplies",
+            "delivery_reference": "INV-2026-1042",
+            "valet": True,
+        },
+        headers=user_headers,
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["booking_type"] == "logistics"
+    assert body["cargo_type"] == "Retail supplies"
+    assert body["delivery_reference"] == "INV-2026-1042"
+    assert body["valet"] is False
+    assert body["slot_code"] == slot["code"]
+
+
+def test_logistics_booking_requires_cargo(client, user_headers):
+    location = client.get("/api/locations").json()[0]
+    slot = _first_vacant(client, location["id"])
+    start, end = _slot_times(1)
+    response = client.post(
+        "/api/bookings",
+        json={
+            "slot_id": slot["id"],
+            "vehicle_number": "RJ14LG2027",
+            "start_time": start,
+            "end_time": end,
+            "booking_type": "logistics",
+            "cargo_type": "",
+        },
+        headers=user_headers,
+    )
+    assert response.status_code == 422
 
 
 def test_double_booking_is_rejected(client, user_headers):
@@ -857,8 +1094,11 @@ def test_nearby_bays_lists_open_lots(client, monkeypatch):
     assert all(item["location"]["available_slots"] > 0 for item in body["lots"])
     assert all(item["distance_km"] <= 8 for item in body["lots"])
     assert len(body["lots"]) <= 8
-    distances = [item["distance_km"] for item in body["lots"]]
-    assert distances == sorted(distances)
+    scores = [item["park_score"] for item in body["lots"]]
+    assert scores == sorted(scores, reverse=True)
+    assert all(0 <= score <= 100 for score in scores)
+    assert all(set(item["factors"]) == {"distance", "availability", "prediction", "price", "compatibility"} for item in body["lots"])
+    assert all(item["rank"] == index + 1 for index, item in enumerate(body["lots"]))
 
 
 def test_place_suggestions(client, monkeypatch):
@@ -890,8 +1130,9 @@ def test_nearby_bays_stay_inside_two_km(client, monkeypatch):
     assert all(lot["distance_km"] <= 2 for lot in body["lots"])
     assert body["lots"][0]["location"]["name"] == "Hawa Mahal"
     assert body["lots"][0]["distance_km"] == 0
-    names = [lot["location"]["name"] for lot in body["lots"]]
-    assert names == sorted(names, key=lambda n: next(lot["distance_km"] for lot in body["lots"] if lot["location"]["name"] == n))
+    scores = [lot["park_score"] for lot in body["lots"]]
+    assert scores == sorted(scores, reverse=True)
+    assert body["lots"][0]["reasons"]
 
 
 def test_nearby_bays_empty_outside_radius(client, monkeypatch):

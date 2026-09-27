@@ -19,7 +19,9 @@ import { useI18n } from "../context/I18nContext";
 import { useLiveEvent } from "../context/LiveContext";
 import { useToast } from "../context/ToastContext";
 import SlotGrid, { Legend } from "../components/SlotGrid";
+import BayDetails from "../components/BayDetails";
 import NearbyPanel from "../components/NearbyPanel";
+import OperatorCard from "../components/OperatorCard";
 import OccupancyChart from "../components/OccupancyChart";
 import RatingSummary from "../components/RatingSummary";
 import { Button, Card, Field, Input, Photo, Spinner } from "../components/ui";
@@ -84,6 +86,9 @@ export default function Lot() {
   const [location, setLocation] = useState(null);
   const [slots, setSlots] = useState([]);
   const [selected, setSelected] = useState(null);
+  // The bay whose details sheet is open. Any bay can be inspected; only a free
+  // one of the right type can then be chosen.
+  const [inspecting, setInspecting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [flashing, setFlashing] = useState(() => new Set());
@@ -159,6 +164,11 @@ export default function Lot() {
       ),
     );
     flash(slot.id);
+    setInspecting((current) =>
+      current?.id === slot.id
+        ? { ...current, status: slot.status, kind: slot.kind || current.kind }
+        : current,
+    );
     setSelected((current) => {
       if (current?.id !== slot.id || slot.status === "vacant") return current;
       toast.toast(`Bay ${slot.code} was just taken - pick another`);
@@ -172,7 +182,16 @@ export default function Lot() {
     if (payload.layout) {
       api.slots(locationId).then(setSlots).catch(() => {});
       setSelected(null);
+      setInspecting(null);
     }
+  });
+
+  // The operator pulled this lot while the driver was looking at it -- booking
+  // would only fail at submit, so send them back to the list instead.
+  useLiveEvent("location.deleted", (payload) => {
+    if (payload.id !== locationId) return;
+    toast.toast("This lot was just taken offline by the operator");
+    navigate("/");
   });
 
   const valetOn = Boolean(location?.valet_enabled);
@@ -200,6 +219,7 @@ export default function Lot() {
   const pickKind = (kind) => {
     setVehicleKind(kind);
     setSelected(null);
+    setInspecting(null);
     if (kind === "heavy") setWantValet(false);
   };
 
@@ -298,19 +318,23 @@ export default function Lot() {
               </span>
             </div>
           </div>
-          <div className="grid shrink-0 grid-cols-2 gap-3 sm:w-48 sm:grid-cols-1">
-            <div className="rounded-2xl bg-teal-50 px-4 py-3 sm:text-right">
-              <p className="font-display text-2xl font-bold text-teal-700">{vacantCount}</p>
-              <p className="text-xs font-medium text-ink-500">
-                {t("lot.available", { n: vacantCount })}
-              </p>
+          <div className="shrink-0 space-y-3 sm:w-64">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-teal-50 px-4 py-3">
+                <p className="font-display text-2xl font-bold text-teal-700">{vacantCount}</p>
+                <p className="text-xs font-medium text-ink-500">
+                  {t("lot.available", { n: vacantCount })}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-sand-100 px-4 py-3">
+                <p className="font-display text-2xl font-bold text-ink-900">
+                  {money(location.price_per_hour)}
+                </p>
+                <p className="text-xs font-medium text-ink-500">{t("home.hour")}</p>
+              </div>
             </div>
-            <div className="rounded-2xl bg-sand-100 px-4 py-3 sm:text-right">
-              <p className="font-display text-2xl font-bold text-ink-900">
-                {money(location.price_per_hour)}
-              </p>
-              <p className="text-xs font-medium text-ink-500">{t("home.hour")}</p>
-            </div>
+            {/* Who to call about this lot, in reach before anyone picks a bay. */}
+            <OperatorCard location={location} />
           </div>
         </div>
       </Card>
@@ -388,10 +412,7 @@ export default function Lot() {
             slots={slots}
             rows={location.rows}
             selectedId={selected?.id}
-            onSelect={(slot) => {
-              setSelected(slot);
-              if (bayKind(slot.kind) === "heavy") setWantValet(false);
-            }}
+            onSelect={setInspecting}
             flashing={flashing}
             vehicleKind={vehicleKind}
           />
@@ -505,6 +526,18 @@ export default function Lot() {
           )}
         </Card>
       </div>
+
+      <BayDetails
+        bay={inspecting}
+        location={location}
+        vehicleKind={vehicleKind}
+        onClose={() => setInspecting(null)}
+        onChoose={(bay) => {
+          setSelected(bay);
+          if (bayKind(bay.kind) === "heavy") setWantValet(false);
+          setInspecting(null);
+        }}
+      />
     </div>
   );
 }

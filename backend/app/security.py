@@ -3,11 +3,13 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+import hmac
+
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from .config import JWT_ALGORITHM, JWT_EXPIRE_DAYS, JWT_SECRET
+from .config import JWT_ALGORITHM, JWT_EXPIRE_DAYS, JWT_SECRET, SENSOR_INGEST_KEY
 from .database import get_db
 from .models import Role, User
 
@@ -73,3 +75,25 @@ def current_admin(user: User = Depends(current_user)) -> User:
     if user.role != Role.ADMIN.value:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
+
+
+def admin_or_sensor_device(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    x_device_key: str | None = Header(default=None, alias="X-Device-Key"),
+    db: Session = Depends(get_db),
+) -> str:
+    """Accept a provisioned edge-device key or an administrator JWT."""
+    if x_device_key and SENSOR_INGEST_KEY and hmac.compare_digest(x_device_key, SENSOR_INGEST_KEY):
+        return "device"
+    if credentials is None:
+        raise _unauthorised("Sensor device key or administrator session required")
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise _unauthorised("Session expired, please log in again")
+    except jwt.InvalidTokenError:
+        raise _unauthorised("Invalid token")
+    user = db.get(User, payload.get("sub"))
+    if user is None or user.role != Role.ADMIN.value:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin or sensor access required")
+    return "admin"

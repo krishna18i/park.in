@@ -83,6 +83,7 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 }
 
 export const api = {
+  health: () => request("/health", { auth: false }),
   // auth
   signup: (data) => request("/auth/signup", { method: "POST", body: data, auth: false }),
   login: (data) => request("/auth/login", { method: "POST", body: data, auth: false }),
@@ -105,12 +106,13 @@ export const api = {
     }
     return request(`/locations/nearest?${params}`, { auth: false });
   },
-  nearbyBays: ({ q, lat, lng }) => {
+  nearbyBays: ({ q, lat, lng, vehicleKind = "standard" }) => {
     const params = new URLSearchParams({ q });
     if (lat != null && lng != null) {
       params.set("lat", String(lat));
       params.set("lng", String(lng));
     }
+    params.set("vehicle_kind", vehicleKind);
     return request(`/locations/nearby-bays?${params}`, { auth: false });
   },
   predictOccupancy: (id) => request(`/locations/${id}/predict-occupancy`, { auth: false }),
@@ -155,4 +157,15 @@ export const api = {
   overrideSlot: (id, status) =>
     request(`/admin/slots/${id}`, { method: "PATCH", body: { status } }),
   verifyTicket: (code) => request("/admin/verify-ticket", { method: "POST", body: { code } }),
+  resetDemo: () => request("/admin/reset-demo", { method: "POST" }),
+
+  // authenticated edge-sensor ingestion / authority audit
+  sensorEvent: (data) => request("/iot/events", { method: "POST", body: data }),
+  sensorEvents: (limit = 30) => request(`/iot/events?limit=${limit}`),
+  allocations: (activeOnly = false) => request(`/governance/allocations?active_only=${activeOnly}`),
+  createAllocation: (data) => request("/governance/allocations", { method: "POST", body: data }),
+  revertAllocation: (id) => request(`/governance/allocations/${id}/revert`, { method: "POST" }),
+  incidents: (status = "") => request(`/governance/incidents${status ? `?status=${status}` : ""}`),
+  createIncident: (data) => request("/governance/incidents", { method: "POST", body: data }),
+  resolveIncident: (id) => request(`/governance/incidents/${id}/resolve`, { method: "POST" }),
 };

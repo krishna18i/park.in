@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
 from ..feedback import EDIT_WINDOW_HOURS, FeedbackStatus, join_tags, new_reference, priority_for
-from ..models import Booking, BookingStatus, Feedback, Location, Role, Slot, SlotKind, SlotStatus, User
+from ..models import Booking, BookingStatus, BookingType, Feedback, Location, Role, Slot, SlotKind, SlotStatus, User
 from ..qr import qr_data_uri
 from ..schemas import (
     BookingIn,
@@ -25,6 +25,8 @@ from ..utils import as_utc, new_ticket_code
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 MAX_STAY_HOURS = 24
+MIN_LOGISTICS_DWELL_MINUTES = 15
+MAX_LOGISTICS_DWELL_HOURS = 2
 PAST_START_GRACE = timedelta(minutes=5)
 
 
@@ -56,6 +58,23 @@ async def create_booking(
             status_code=400, detail=f"Bookings are capped at {MAX_STAY_HOURS} hours"
         )
 
+    if (
+        payload.booking_type is BookingType.LOGISTICS
+        and payload.end_time - payload.start_time > timedelta(hours=MAX_LOGISTICS_DWELL_HOURS)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Loading-zone reservations are capped at {MAX_LOGISTICS_DWELL_HOURS} hours",
+        )
+    if (
+        payload.booking_type is BookingType.LOGISTICS
+        and payload.end_time - payload.start_time < timedelta(minutes=MIN_LOGISTICS_DWELL_MINUTES)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Loading-zone reservations must be at least {MIN_LOGISTICS_DWELL_MINUTES} minutes",
+        )
+
     slot = db.get(Slot, payload.slot_id)
     if slot is None:
         raise HTTPException(status_code=404, detail="Slot not found")
@@ -64,7 +83,13 @@ async def create_booking(
     if location is None:
         raise HTTPException(status_code=404, detail="Location not found")
 
-    want_valet = bool(payload.valet)
+    if payload.booking_type is BookingType.LOGISTICS and slot.kind != SlotKind.HEAVY.value:
+        raise HTTPException(
+            status_code=400,
+            detail="Logistics reservations require a heavy/loading bay",
+        )
+
+    want_valet = bool(payload.valet) and payload.booking_type is BookingType.PARKING
     if want_valet and not location.valet_enabled:
         raise HTTPException(
             status_code=400,
@@ -102,6 +127,9 @@ async def create_booking(
         amount=amount,
         valet=want_valet,
         valet_fee=valet_fee,
+        booking_type=payload.booking_type.value,
+        cargo_type=payload.cargo_type,
+        delivery_reference=payload.delivery_reference,
         status=BookingStatus.PENDING.value,
         ticket_code=new_ticket_code(),
         reserved_until=hold_deadline(),

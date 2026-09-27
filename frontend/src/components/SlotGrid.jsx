@@ -1,17 +1,19 @@
 import { Car, Truck, Zap } from "lucide-react";
 import { bayKind } from "../lib/layout";
 
+// Every bay is clickable -- a taken one opens its details so the driver can
+// reach the operator about it, so nothing here is styled as dead.
 const STYLES = {
   vacant:
-    "border-teal-400 bg-white text-teal-700 hover:-translate-y-0.5 hover:border-teal-500 hover:shadow-md cursor-pointer",
-  occupied: "border-red-200 bg-red-50 text-red-300 cursor-not-allowed",
-  reserved: "border-sand-300 bg-sand-200 text-ink-500 hatched cursor-not-allowed",
+    "border-teal-400 bg-white text-teal-700 hover:-translate-y-0.5 hover:border-teal-500 hover:shadow-md",
+  occupied: "border-red-200 bg-red-50 text-red-300 hover:border-red-300",
+  reserved: "border-sand-300 bg-sand-200 text-ink-500 hatched hover:border-sand-400",
 };
 
 const SELECTED =
   "border-brand-500 bg-brand-500 text-white shadow-lg shadow-brand-500/30 scale-105 ring-4 ring-brand-200";
 
-const DIMMED = "border-sand-200 bg-sand-50 text-ink-500/40 cursor-not-allowed opacity-50";
+const DIMMED = "border-sand-200 bg-sand-50 text-ink-500/40 opacity-50 hover:opacity-75";
 
 export const LEGEND = [
   { label: "Available", className: "border-teal-400 bg-white" },
@@ -47,6 +49,8 @@ export default function SlotGrid({
   flashing,
   vehicleKind = "standard",
 }) {
+  // `onSelect` receives every bay, free or not. The lot page opens the bay
+  // sheet and only books the ones that are actually bookable.
   const byRow = Array.from({ length: rows }, (_, row) =>
     slots.filter((slot) => slot.row === row).sort((a, b) => a.col - b.col),
   );
@@ -71,11 +75,10 @@ export default function SlotGrid({
                   <button
                     key={slot.id}
                     type="button"
-                    disabled={!selectable}
-                    onClick={() => selectable && onSelect(slot)}
-                    aria-label={`Bay ${slot.code}, ${slot.status}, ${kind}`}
+                    onClick={() => onSelect(slot)}
+                    aria-label={`Bay ${slot.code}, ${slot.status}, ${kind}. Open bay details`}
                     aria-pressed={isSelected}
-                    className={`flex aspect-[3/4] w-full max-w-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg border-2 text-[11px] font-bold transition-all duration-200 ${
+                    className={`flex aspect-[3/4] w-full max-w-[3.25rem] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border-2 text-[11px] font-bold transition-all duration-200 ${
                       isSelected ? SELECTED : selectable ? STYLES[slot.status] : DIMMED
                     } ${flashing?.has(slot.id) ? "animate-pulse-ring" : ""}`}
                   >

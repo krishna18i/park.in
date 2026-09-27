@@ -6,7 +6,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from .config import RESERVATION_HOLD_MINUTES
-from .models import Booking, BookingStatus, Location, Slot, SlotStatus
+from .models import Booking, BookingStatus, DynamicAllocation, Location, Slot, SlotStatus
 from .realtime import manager
 from .utils import as_utc
 
@@ -107,3 +107,30 @@ def expire_stale_bookings(db: Session) -> list[Slot]:
     if freed:
         db.commit()
     return freed
+
+
+def expire_dynamic_allocations(db: Session) -> list[Slot]:
+    """Restore expired allocations once their bays are physically vacant."""
+    now = datetime.now(timezone.utc)
+    rows = db.execute(
+        select(DynamicAllocation).where(
+            DynamicAllocation.status == "active",
+            DynamicAllocation.expires_at <= now,
+        )
+    ).scalars().all()
+    restored = []
+    for row in rows:
+        slot = db.get(Slot, row.slot_id)
+        if slot is None:
+            row.status = "expired"
+            row.reverted_at = now
+            continue
+        if slot.status != SlotStatus.VACANT.value:
+            continue
+        slot.kind = row.previous_kind
+        row.status = "expired"
+        row.reverted_at = now
+        restored.append(slot)
+    if rows:
+        db.commit()
+    return restored

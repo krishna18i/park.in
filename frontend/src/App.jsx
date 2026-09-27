@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { I18nProvider, useI18n } from "./context/I18nContext";
@@ -6,17 +7,22 @@ import { ToastProvider } from "./context/ToastContext";
 import { RequireAdmin, RequireAuth } from "./components/Guards";
 import Navbar from "./components/Navbar";
 import { LanguagePrompt } from "./components/LanguageSwitcher";
+import { Spinner } from "./components/ui";
 import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Lot from "./pages/Lot";
-import NearbyPlaces from "./pages/NearbyPlaces";
-import Checkout from "./pages/Checkout";
-import Ticket from "./pages/Ticket";
-import Feedback from "./pages/Feedback";
-import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
-import Help from "./pages/Help";
+
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const Lot = lazy(() => import("./pages/Lot"));
+const NearbyPlaces = lazy(() => import("./pages/NearbyPlaces"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const Ticket = lazy(() => import("./pages/Ticket"));
+const Feedback = lazy(() => import("./pages/Feedback"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Help = lazy(() => import("./pages/Help"));
+const CityCommand = lazy(() => import("./pages/CityCommand"));
+const Logistics = lazy(() => import("./pages/Logistics"));
+const Showcase = lazy(() => import("./pages/Showcase"));
 
 /** Asks for a language the moment someone signs in, before they go anywhere. */
 function LanguageGate() {
@@ -32,6 +38,7 @@ function Shell() {
         <Navbar />
         <LanguageGate />
         <main className="flex-1">
+          <Suspense fallback={<Spinner label="Opening Park.in" />}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -86,6 +93,14 @@ function Shell() {
               }
             />
             <Route
+              path="/logistics"
+              element={
+                <RequireAuth>
+                  <Logistics />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="/admin"
               element={
                 <RequireAdmin>
@@ -93,8 +108,25 @@ function Shell() {
                 </RequireAdmin>
               }
             />
+            <Route
+              path="/city"
+              element={
+                <RequireAdmin>
+                  <CityCommand />
+                </RequireAdmin>
+              }
+            />
+            <Route
+              path="/showcase"
+              element={
+                <RequireAdmin>
+                  <Showcase />
+                </RequireAdmin>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
         <footer className="border-t border-sand-200 py-6 text-center text-xs text-ink-500">
           {t("footer")}

@@ -13,7 +13,7 @@ from .feedback import (
     clean_tags,
     split_tags,
 )
-from .models import BookingStatus, PaymentMethod, SlotKind, SlotStatus
+from .models import BookingStatus, BookingType, PaymentMethod, SlotKind, SlotStatus
 
 
 def _ensure_utc(value):
@@ -30,6 +30,26 @@ def _ensure_utc(value):
 UtcDatetime = Annotated[datetime, BeforeValidator(_ensure_utc)]
 
 VEHICLE_RE = re.compile(r"^[A-Z0-9]{4,12}$")
+CONTACT_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def clean_contact_phone(value: str | None) -> str:
+    """Keep the digits and a leading +, so the browser can dial it.
+
+    A blank number is fine -- an operator may publish only an email address --
+    but a half-typed one is not, because the driver would tap a dead link.
+    """
+    cleaned = re.sub(r"[^\d+]", "", value or "").strip()
+    if cleaned and len(re.sub(r"\D", "", cleaned)) < 10:
+        raise ValueError("Enter a full contact number, e.g. +91 98290 12345")
+    return cleaned
+
+
+def clean_contact_email(value: str | None) -> str:
+    cleaned = (value or "").strip().lower()
+    if cleaned and not CONTACT_EMAIL_RE.match(cleaned):
+        raise ValueError("Enter a valid contact email, e.g. desk@lot.example")
+    return cleaned
 
 
 # ---------------------------------------------------------------- auth
@@ -84,6 +104,9 @@ class LocationIn(BaseModel):
     address: str = Field(min_length=2, max_length=400)
     description: str = Field(default="", max_length=400)
     image_url: str = Field(default="", max_length=600)
+    contact_name: str = Field(default="", max_length=120)
+    contact_phone: str = Field(default="", max_length=20)
+    contact_email: str = Field(default="", max_length=255)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     rows: int = Field(ge=1, le=12)
@@ -94,6 +117,16 @@ class LocationIn(BaseModel):
         default=80.0, ge=0, le=10000, description="One-time valet fee per booking"
     )
     slot_layout: list[SlotLayoutCell] | None = None
+
+    @field_validator("contact_phone")
+    @classmethod
+    def _clean_phone(cls, value: str) -> str:
+        return clean_contact_phone(value)
+
+    @field_validator("contact_email")
+    @classmethod
+    def _clean_email(cls, value: str) -> str:
+        return clean_contact_email(value)
 
     @model_validator(mode="after")
     def _slot_layout_matches_grid(self):
@@ -113,11 +146,24 @@ class LocationUpdate(BaseModel):
     address: str | None = Field(default=None, min_length=2, max_length=400)
     description: str | None = Field(default=None, max_length=400)
     image_url: str | None = Field(default=None, max_length=600)
+    contact_name: str | None = Field(default=None, max_length=120)
+    contact_phone: str | None = Field(default=None, max_length=20)
+    contact_email: str | None = Field(default=None, max_length=255)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     price_per_hour: float | None = Field(default=None, gt=0, le=10000)
     valet_enabled: bool | None = None
     valet_price_per_hour: float | None = Field(default=None, ge=0, le=10000)
+
+    @field_validator("contact_phone")
+    @classmethod
+    def _clean_phone(cls, value: str | None) -> str | None:
+        return None if value is None else clean_contact_phone(value)
+
+    @field_validator("contact_email")
+    @classmethod
+    def _clean_email(cls, value: str | None) -> str | None:
+        return None if value is None else clean_contact_email(value)
 
     @model_validator(mode="after")
     def _at_least_one_field(self):
@@ -133,6 +179,9 @@ class LocationOut(BaseModel):
     address: str
     description: str
     image_url: str
+    contact_name: str = ""
+    contact_phone: str = ""
+    contact_email: str = ""
     latitude: float | None = None
     longitude: float | None = None
     rows: int
@@ -167,6 +216,12 @@ class NearestBayOut(BaseModel):
 class NearbyLotOut(BaseModel):
     location: LocationOut
     distance_km: float
+    rank: int = 0
+    park_score: float = 0
+    predicted_occupancy: float = 0
+    compatible_bays: int = 0
+    factors: dict[str, float] = Field(default_factory=dict)
+    reasons: list[str] = Field(default_factory=list)
 
 
 class NearbyLotsOut(BaseModel):
@@ -205,6 +260,9 @@ class BookingIn(BaseModel):
     start_time: UtcDatetime
     end_time: UtcDatetime
     valet: bool = False
+    booking_type: BookingType = BookingType.PARKING
+    cargo_type: str = Field(default="", max_length=80)
+    delivery_reference: str = Field(default="", max_length=80)
 
     @field_validator("vehicle_number")
     @classmethod
@@ -213,6 +271,20 @@ class BookingIn(BaseModel):
         if not VEHICLE_RE.match(cleaned):
             raise ValueError("Enter a valid vehicle number, e.g. RJ14AB1234")
         return cleaned
+
+    @field_validator("cargo_type", "delivery_reference")
+    @classmethod
+    def _trim_logistics_text(cls, value: str) -> str:
+        return (value or "").strip()
+
+    @model_validator(mode="after")
+    def _logistics_details(self):
+        if self.booking_type is BookingType.LOGISTICS and not self.cargo_type:
+            raise ValueError("Choose a cargo type for a logistics reservation")
+        if self.booking_type is BookingType.PARKING:
+            self.cargo_type = ""
+            self.delivery_reference = ""
+        return self
 
 
 class BookingOut(BaseModel):
@@ -231,6 +303,9 @@ class BookingOut(BaseModel):
     amount: float
     valet: bool = False
     valet_fee: float = 0.0
+    booking_type: BookingType = BookingType.PARKING
+    cargo_type: str = ""
+    delivery_reference: str = ""
     status: BookingStatus
     rating: int | None = None
     ticket_code: str
@@ -515,6 +590,97 @@ class StatsOut(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
+
+class SensorEventIn(BaseModel):
+    device_id: str = Field(min_length=3, max_length=80)
+    slot_id: str = Field(min_length=1, max_length=80)
+    observed_status: SlotStatus
+    distance_cm: float | None = Field(default=None, ge=0, le=10000)
+    confidence: float = Field(default=1.0, ge=0, le=1)
+    source: str = Field(default="ultrasonic", min_length=2, max_length=24)
+
+    @model_validator(mode="after")
+    def _physical_state_only(self):
+        if self.observed_status is SlotStatus.RESERVED:
+            raise ValueError("Sensors report physical vacant or occupied state, not reserved")
+        self.device_id = self.device_id.strip()
+        self.source = self.source.strip().lower()
+        return self
+
+
+class SensorEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    device_id: str
+    slot_id: str
+    location_id: str
+    slot_code: str = ""
+    location_name: str = ""
+    observed_status: str
+    previous_status: str
+    distance_cm: float | None = None
+    confidence: float
+    source: str
+    applied: bool
+    action: str
+    received_at: UtcDatetime
+
+
+class AllocationIn(BaseModel):
+    slot_id: str
+    allocated_kind: SlotKind
+    reason: str = Field(min_length=5, max_length=300)
+    duration_minutes: int = Field(ge=15, le=1440)
+
+    @field_validator("allocated_kind")
+    @classmethod
+    def _allocation_kind(cls, value: SlotKind) -> SlotKind:
+        if value is SlotKind.VALET:
+            raise ValueError("Valet is a service, not an allocation type")
+        return value
+
+
+class AllocationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    slot_id: str
+    location_id: str
+    slot_code: str = ""
+    location_name: str = ""
+    previous_kind: str
+    allocated_kind: str
+    reason: str
+    status: str
+    starts_at: UtcDatetime
+    expires_at: UtcDatetime
+    reverted_at: UtcDatetime | None = None
+    created_by: str
+
+
+class IncidentIn(BaseModel):
+    location_id: str
+    slot_id: str | None = None
+    category: str = Field(min_length=3, max_length=40)
+    severity: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
+    description: str = Field(min_length=5, max_length=500)
+    source: str = Field(default="authority", max_length=24)
+
+
+class IncidentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    location_id: str
+    slot_id: str | None = None
+    location_name: str = ""
+    slot_code: str = ""
+    category: str
+    severity: str
+    description: str
+    source: str
+    status: str
+    created_at: UtcDatetime
+    resolved_at: UtcDatetime | None = None
 
 
 class TicketActionOut(BaseModel):

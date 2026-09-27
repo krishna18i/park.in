@@ -48,12 +48,18 @@ def ensure_schema() -> None:
             _add_column(conn, "locations", "longitude", "longitude FLOAT")
             _add_column(conn, "locations", "valet_enabled", "valet_enabled BOOLEAN DEFAULT 0")
             _add_column(conn, "locations", "valet_price_per_hour", "valet_price_per_hour FLOAT DEFAULT 80")
+            _add_column(conn, "locations", "contact_name", "contact_name VARCHAR(120) DEFAULT ''")
+            _add_column(conn, "locations", "contact_phone", "contact_phone VARCHAR(20) DEFAULT ''")
+            _add_column(conn, "locations", "contact_email", "contact_email VARCHAR(255) DEFAULT ''")
         if "slots" in tables:
             _add_column(conn, "slots", "kind", "kind VARCHAR(16) DEFAULT 'standard'")
             conn.execute(text("UPDATE slots SET kind = 'standard' WHERE kind = 'valet'"))
         if "bookings" in tables:
             _add_column(conn, "bookings", "valet", "valet BOOLEAN DEFAULT 0")
             _add_column(conn, "bookings", "valet_fee", "valet_fee FLOAT DEFAULT 0")
+            _add_column(conn, "bookings", "booking_type", "booking_type VARCHAR(16) DEFAULT 'parking'")
+            _add_column(conn, "bookings", "cargo_type", "cargo_type VARCHAR(80) DEFAULT ''")
+            _add_column(conn, "bookings", "delivery_reference", "delivery_reference VARCHAR(80) DEFAULT ''")
         if "users" in tables:
             _add_column(conn, "users", "auth_provider", "auth_provider VARCHAR(16) DEFAULT 'password'")
         if "feedback" in tables:

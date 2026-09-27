@@ -118,10 +118,21 @@ export default function Logistics() {
           <span className="inline-flex items-center gap-2 rounded-full border border-orange-300/25 bg-orange-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-orange-200"><Radio className="h-3.5 w-3.5" /> Urban logistics network</span>
           <div className="mt-6 grid gap-9 lg:grid-cols-[1fr_.7fr] lg:items-end">
             <div><h1 className="max-w-4xl font-display text-5xl font-extrabold leading-[1.02] tracking-tight sm:text-6xl">Deliver goods.<br /><span className="text-orange-400">Not congestion.</span></h1><p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-300">Reserve a legal loading window before arrival, verify at the gate and keep city curbs moving.</p></div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="logistics-hero-stat"><b>{zones.reduce((sum, zone) => sum + zone.freeLoadingBays.length, 0)}</b><span>Free bays</span></div>
-              <div className="logistics-hero-stat"><b>120</b><span>Max minutes</span></div>
-              <div className="logistics-hero-stat"><b>QR</b><span>Verified entry</span></div>
+            <div className="space-y-4">
+              <div className="logistics-flow-card" aria-label="Animated delivery journey: approach, load, and depart">
+                <div className="logistics-flow-head"><span><Radio className="h-3 w-3" /> LIVE FREIGHT MOVEMENT</span><b>APPROACH → LOAD → DEPART</b></div>
+                <div className="logistics-flow-road" aria-hidden="true">
+                  <span className="logistics-flow-line" />
+                  <div className="logistics-loading-bay"><Warehouse /><span>LOADING BAY</span><b><em /><em /><em /></b></div>
+                  <div className="logistics-road-truck"><span className="logistics-truck-status">LOADING</span><span className="logistics-truck-shell"><Truck /></span><span className="logistics-truck-signal" /></div>
+                </div>
+                <div className="logistics-flow-steps"><span><i />Approaching</span><span><i />Loading window</span><span><i />Departing</span></div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="logistics-hero-stat"><b>{zones.reduce((sum, zone) => sum + zone.freeLoadingBays.length, 0)}</b><span>Free bays</span></div>
+                <div className="logistics-hero-stat"><b>120</b><span>Max minutes</span></div>
+                <div className="logistics-hero-stat"><b>QR</b><span>Verified entry</span></div>
+              </div>
             </div>
           </div>
         </div>

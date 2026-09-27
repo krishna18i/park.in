@@ -197,7 +197,7 @@ export default function SearchBay({ locations = [], onOpen }) {
   return (
     <form
       onSubmit={submit}
-      className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-sand-200 bg-white/95 p-4 text-left shadow-xl shadow-slate-950/10 backdrop-blur"
+      className="relative z-[1000] mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-sand-200 bg-white/95 p-4 text-left shadow-xl shadow-slate-950/10 backdrop-blur"
     >
       <label htmlFor="search-bay" className="flex items-center gap-2 text-sm font-bold text-ink-900">
         <MapPin className="h-4 w-4 text-brand-500" />
@@ -243,7 +243,7 @@ export default function SearchBay({ locations = [], onOpen }) {
             <ul
               id="search-bay-list"
               role="listbox"
-              className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-sand-200 bg-white py-1 shadow-xl"
+              className="absolute z-[1100] mt-1 max-h-80 w-full overflow-auto rounded-xl border border-sand-200 bg-white py-1 shadow-xl"
             >
               {hints.length > 0 && (
                 <li className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
@@ -303,7 +303,7 @@ export default function SearchBay({ locations = [], onOpen }) {
           {open && showingLots && (
             <div
               id="search-bay-list"
-              className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-sand-200 bg-white shadow-xl"
+              className="absolute z-[1100] mt-1 w-full overflow-hidden rounded-xl border border-sand-200 bg-white shadow-xl"
             >
               <p className="border-b border-sand-100 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
                 {t("home.search.lotsTitle")}

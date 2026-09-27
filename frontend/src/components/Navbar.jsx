@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Building2, CircleHelp, CircleParking, LayoutDashboard, LogOut, Presentation, Radio, ShieldCheck, Truck } from "lucide-react";
+import { Building2, CircleHelp, LayoutDashboard, LogOut, Presentation, Radio, ShieldCheck, Truck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../context/I18nContext";
 import { useLive } from "../context/LiveContext";
@@ -12,7 +12,7 @@ function NavItem({ to, icon: Icon, children }) {
       to={to}
       className={({ isActive }) =>
         `inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
-          isActive ? "bg-brand-50 text-brand-600" : "text-ink-700 hover:bg-sand-100"
+          isActive ? "bg-orange-400/15 text-orange-300 ring-1 ring-orange-300/20" : "text-slate-300 hover:bg-white/[0.07] hover:text-white"
         }`
       }
     >
@@ -28,9 +28,9 @@ function LiveDot() {
   return (
     <span
       title={connected ? "Live updates connected" : "Reconnecting to live updates"}
-      className="hidden items-center gap-1.5 rounded-full bg-sand-100 px-3 py-1.5 text-xs font-semibold text-ink-500 sm:inline-flex"
+      className="hidden items-center gap-1.5 rounded-full border border-cyan-300/15 bg-cyan-300/[0.07] px-3 py-1.5 text-xs font-semibold text-cyan-200 sm:inline-flex"
     >
-      <Radio className={`h-3.5 w-3.5 ${connected ? "text-teal-500" : "text-ink-500/50"}`} />
+      <Radio className={`h-3.5 w-3.5 ${connected ? "text-cyan-300" : "text-slate-500"}`} />
       {connected ? t("nav.live") : t("nav.offline")}
     </span>
   );
@@ -42,14 +42,14 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-sand-200 bg-sand-50/85 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#07101f]/95 text-white shadow-lg shadow-slate-950/20 backdrop-blur-xl">
       <nav className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-3 sm:px-6">
         <Link to="/" className="mr-auto inline-flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-500 text-white shadow-md shadow-brand-500/30">
-            <CircleParking className="h-5 w-5" />
+          <span className="grid h-10 w-10 place-items-center">
+            <img src="/parkin-mark.svg" alt="" className="h-10 w-10" />
           </span>
-          <span className="font-display text-xl font-extrabold tracking-tight text-ink-900">
-            Park<span className="text-brand-500">.in</span>
+          <span className="font-display text-xl font-extrabold tracking-tight text-white">
+            Park<span className="text-orange-400">.in</span>
           </span>
         </Link>
 
@@ -83,12 +83,13 @@ export default function Navbar() {
                 </NavItem>
               </>
             )}
-            <span className="hidden text-sm font-semibold text-ink-700 md:inline">
+            <span className="hidden text-sm font-semibold text-slate-300 md:inline">
               {user.name.split(" ")[0]}
             </span>
             <Button
               variant="ghost"
               size="sm"
+              className="!text-slate-300 hover:!bg-white/[0.07] hover:!text-white"
               onClick={() => {
                 logout();
                 navigate("/");
@@ -100,7 +101,7 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
+            <Button variant="ghost" size="sm" className="!text-slate-300 hover:!bg-white/[0.07] hover:!text-white" onClick={() => navigate("/login")}>
               {t("nav.login")}
             </Button>
             <Button size="sm" onClick={() => navigate("/signup")}>

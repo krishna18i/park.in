@@ -35,7 +35,7 @@ export function LanguageTab() {
         aria-expanded={open}
         aria-label={t("lang.tab")}
         className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
-          open ? "bg-brand-50 text-brand-600" : "text-ink-700 hover:bg-sand-100"
+          open ? "bg-cyan-300/10 text-cyan-200" : "text-slate-300 hover:bg-white/[0.07] hover:text-white"
         }`}
       >
         <Globe className="h-4 w-4" />
@@ -45,9 +45,9 @@ export function LanguageTab() {
       {open && (
         <div
           role="menu"
-          className="animate-slide-in absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-sand-200 bg-white p-1.5 shadow-xl shadow-ink-900/10"
+          className="animate-slide-in absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1628] p-1.5 text-slate-200 shadow-2xl shadow-slate-950/40"
         >
-          <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-500">
+          <p className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             {t("lang.tab")}
           </p>
           {languages.map((item) => (
@@ -62,14 +62,14 @@ export function LanguageTab() {
               }}
               className={`flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left text-sm transition-colors ${
                 item.code === lang
-                  ? "bg-brand-50 font-bold text-brand-600"
-                  : "font-semibold text-ink-700 hover:bg-sand-100"
+                  ? "bg-cyan-300/10 font-bold text-cyan-200"
+                  : "font-semibold text-slate-300 hover:bg-white/[0.07] hover:text-white"
               }`}
             >
               <span className="min-w-0">
                 <span className="block truncate">{item.label}</span>
                 {item.label !== item.english && (
-                  <span className="block truncate text-[11px] font-medium text-ink-500">
+                  <span className="block truncate text-[11px] font-medium text-slate-500">
                     {item.english}
                   </span>
                 )}

@@ -17,6 +17,7 @@ import {
   Radio,
   RefreshCw,
   Route,
+  Satellite,
   ServerCog,
   ShieldCheck,
   Sparkles,

@@ -339,12 +339,21 @@
 /* Logistics booking ----------------------------------------------------------- */
 .logistics-hero {
   position: relative;
+  display: flex;
+  min-height: calc(100svh - 4rem);
+  align-items: center;
   overflow: hidden;
   color: white;
   background:
     radial-gradient(circle at 82% 12%, rgba(249,115,22,.2), transparent 28%),
     radial-gradient(circle at 16% 85%, rgba(34,211,238,.14), transparent 30%),
     #07101f;
+}
+
+.logistics-hero > .relative { width: 100%; }
+
+@media (max-width: 640px) {
+  .logistics-hero { min-height: auto; }
 }
 
 .logistics-hero::before {
@@ -359,9 +368,20 @@
 
 .logistics-road { position: absolute; right: -5%; bottom: -52%; width: 54%; height: 160%; transform: rotate(28deg); border-left: 2px solid rgba(251,146,60,.2); border-right: 2px solid rgba(251,146,60,.2); background: rgba(255,255,255,.018); }
 .logistics-road i { position: absolute; left: 50%; width: 2px; height: 17%; background: rgba(251,146,60,.35); animation: road-flow 3s linear infinite; }.logistics-road i:nth-child(2) { top: 38%; animation-delay: -1s; }.logistics-road i:nth-child(3) { top: 76%; animation-delay: -2s; }
+.logistics-flow-card { overflow: hidden; padding: .85rem 1rem .7rem; border: 1px solid rgba(103,232,249,.18); border-radius: 1.15rem; background: linear-gradient(145deg,rgba(15,23,42,.86),rgba(7,16,31,.65)); box-shadow: inset 0 1px rgba(255,255,255,.04),0 18px 45px rgba(0,0,0,.18); backdrop-filter: blur(12px); }.logistics-flow-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #67e8f9; font-size: .47rem; font-weight: 900; letter-spacing: .14em; }.logistics-flow-head span { display: inline-flex; align-items: center; gap: .35rem; }.logistics-flow-head b { color: #64748b; font-size: .42rem; }
+.logistics-flow-road { position: relative; height: 92px; margin-top: .55rem; overflow: hidden; border-radius: .8rem; background: linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,.04)); }.logistics-flow-road::before,.logistics-flow-road::after { content: ""; position: absolute; left: 0; right: 0; height: 1px; background: linear-gradient(90deg,transparent,rgba(251,146,60,.3),transparent); }.logistics-flow-road::before { top: 20px; }.logistics-flow-road::after { bottom: 20px; }.logistics-flow-line { position: absolute; top: 50%; left: 0; width: 100%; border-top: 2px dashed rgba(251,146,60,.28); }
+.logistics-loading-bay { position: absolute; z-index: 1; top: 9px; left: 50%; display: grid; width: 112px; height: 74px; place-items: center; border: 1px solid rgba(103,232,249,.42); border-radius: .75rem; color: #67e8f9; background: repeating-linear-gradient(135deg,rgba(34,211,238,.09) 0 7px,rgba(7,16,31,.58) 7px 14px); box-shadow: inset 0 0 22px rgba(34,211,238,.08),0 0 22px rgba(34,211,238,.08); transform: translateX(-50%); }.logistics-loading-bay svg { width: 19px; }.logistics-loading-bay > span { margin-top: -12px; font-size: .43rem; font-weight: 900; letter-spacing: .16em; }.logistics-loading-bay b { position: absolute; right: 7px; bottom: 6px; display: flex; gap: 3px; }.logistics-loading-bay em { display: block; width: 7px; height: 7px; border-radius: 2px; background: #fb923c; box-shadow: 0 0 8px rgba(251,146,60,.7); animation: cargo-pulse 8s ease-in-out infinite; }.logistics-loading-bay em:nth-child(2) { animation-delay: .15s; }.logistics-loading-bay em:nth-child(3) { animation-delay: .3s; }
+.logistics-road-truck { position: absolute; z-index: 3; top: 29px; left: -70px; display: flex; align-items: center; color: #fdba74; animation: logistics-truck-route 8s cubic-bezier(.45,.05,.55,.95) infinite; filter: drop-shadow(0 0 12px rgba(251,146,60,.4)); }.logistics-truck-shell { position: relative; display: grid; width: 68px; height: 38px; place-items: center; border: 1px solid rgba(253,186,116,.7); border-radius: 11px 6px 6px 11px; background: linear-gradient(135deg,#fb923c,#c2410c); box-shadow: inset 0 0 0 3px rgba(7,16,31,.16),0 8px 18px rgba(0,0,0,.4); }.logistics-truck-shell::before,.logistics-truck-shell::after { content: ""; position: absolute; bottom: -5px; width: 10px; height: 10px; border: 2px solid #64748b; border-radius: 50%; background: #07101f; }.logistics-truck-shell::before { left: 10px; }.logistics-truck-shell::after { right: 9px; }.logistics-truck-shell svg { width: 31px; height: 31px; color: white; }.logistics-truck-status { position: absolute; left: 4px; top: -17px; width: 62px; color: #a5f3fc; font-size: .43rem; font-weight: 900; letter-spacing: .12em; text-align: center; opacity: 0; animation: logistics-status 8s linear infinite; }.logistics-truck-signal { position: absolute; top: 16px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 0 5px rgba(34,211,238,.13),0 0 14px #22d3ee; animation: logistics-signal 1s ease-in-out infinite; }
+.logistics-flow-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; margin-top: .4rem; color: #64748b; font-size: .43rem; font-weight: 800; letter-spacing: .06em; text-align: center; text-transform: uppercase; }.logistics-flow-steps span { display: flex; align-items: center; justify-content: center; gap: .3rem; }.logistics-flow-steps i { width: 4px; height: 4px; border-radius: 50%; background: #22d3ee; box-shadow: 0 0 7px #22d3ee; }
 .logistics-hero-stat { padding: 1rem; border: 1px solid rgba(148,163,184,.14); border-radius: 1rem; background: rgba(15,23,42,.6); text-align: center; backdrop-filter: blur(10px); }.logistics-hero-stat b { display: block; color: #fdba74; font: 750 1.5rem var(--font-display); }.logistics-hero-stat span { display: block; margin-top: .2rem; color: #94a3b8; font-size: .62rem; }
 
 @keyframes road-flow { from { transform: translateY(-150%); } to { transform: translateY(600%); } }
+@keyframes logistics-truck-route { 0% { left: -70px; } 30%,38% { left: calc(50% - 34px); } 62%,70% { left: calc(50% - 34px); } 100% { left: calc(100% + 12px); } }
+@keyframes logistics-status { 0%,30%,75%,100% { opacity: 0; } 38%,68% { opacity: 1; } }
+@keyframes logistics-signal { 50% { opacity: .35; transform: scale(.7); } }
+@keyframes cargo-pulse { 0%,34%,74%,100% { opacity: .2; transform: translateY(0); } 43%,65% { opacity: 1; transform: translateY(-4px); } }
+
+@media (prefers-reduced-motion: reduce) { .logistics-road-truck { left: calc(50% - 34px); animation: none; }.logistics-truck-status { opacity: 1; animation: none; }.logistics-loading-bay em,.logistics-truck-signal { animation: none; } }
 
 .sensor-lab-button { display: grid; min-height: 76px; grid-template-columns: auto 1fr; align-content: center; align-items: center; gap: .15rem .5rem; padding: .8rem; border: 1px solid; border-radius: .8rem; text-align: left; font-size: .68rem; font-weight: 800; transition: .2s; }.sensor-lab-button small { grid-column: 2; font-size: .52rem; font-weight: 600; opacity: .6; }.sensor-lab-button:hover:not(:disabled) { transform: translateY(-1px); }.sensor-lab-button:disabled { opacity: .45; cursor: wait; }
 .sensor-lab-arrive { color: #fdba74; border-color: rgba(251,146,60,.25); background: rgba(251,146,60,.07); }.sensor-lab-arrive:hover:not(:disabled) { background: rgba(251,146,60,.13); }.sensor-lab-leave { color: #6ee7b7; border-color: rgba(52,211,153,.25); background: rgba(52,211,153,.07); }.sensor-lab-leave:hover:not(:disabled) { background: rgba(52,211,153,.13); }

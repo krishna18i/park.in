@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { CircleParking } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useI18n } from "../context/I18nContext";
 import { useToast } from "../context/ToastContext";
@@ -48,7 +47,7 @@ export default function Signup() {
     <div className="mx-auto flex max-w-md flex-col gap-5 px-6 py-14">
       <div className="text-center">
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/30">
-          <CircleParking className="h-6 w-6" />
+          <img src="/parkin-mark.svg" alt="" className="h-8 w-8" />
         </span>
         <h1 className="mt-4 font-display text-3xl font-bold text-ink-900">Create your account</h1>
         <p className="mt-1 text-sm text-ink-700">Takes about twenty seconds.</p>
